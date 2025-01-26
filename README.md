@@ -9,3 +9,8 @@ If I need to add dependencies to the backend, install them normally with pip, th
 Run frontend with (from within the `gridgame` directory):
 
 `npm run dev`
+
+- note: if selenium isn't working, try installing chromedriver. Make sure you have whatever browser you need, i.e.
+  `chromedriver --version`
+  or
+  `geckodriver --version`
