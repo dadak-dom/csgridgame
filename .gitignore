@@ -1,1 +1,3 @@
 .venv
+data-collector/data
+data-collector/__pycache__
