@@ -1,18 +1,45 @@
-<script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+<script setup>
+import GameBoard from "./components/GameBoard.vue";
+import HelloWorld from "./components/HelloWorld.vue";
+import SearchAutocomplete from "./components/SearchAutocomplete.vue";
 </script>
 
 <template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
+  <div id="app">
+    <GameBoard />
+    <button @click="fetchBoard">Fetch board</button>
+    <button @click="genBoard">Generate new board</button>
+    <button @click="queryCheck">Check queries</button>
+    <p v-if="data">{{ data }}</p>
   </div>
-  <HelloWorld msg="Vite + Vue" />
 </template>
+
+<script>
+export default {
+  name: "App",
+  components: {
+    SearchAutocomplete,
+    GameBoard,
+  },
+  methods: {
+    async fetchBoard() {
+      const response = await fetch("http://127.0.0.1:8000/board");
+      console.log(await response.json());
+      this.data = response;
+    },
+    genBoard() {
+      fetch("http://127.0.0.1:8000/genboard");
+    },
+    queryCheck() {
+      fetch("http://127.0.0.1:8000/queries").then((response) => {
+        response.json().then((value) => {
+          console.log(value);
+        });
+      });
+    },
+  },
+};
+</script>
 
 <style scoped>
 .logo {
