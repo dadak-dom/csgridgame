@@ -7,6 +7,7 @@ The purpose of this data-collector is as follows:
 '''
 
 from selenium import webdriver
+from selenium.webdriver.firefox.service import Service
 from selenium.webdriver.common.by  import By
 from selenium.common.exceptions import NoSuchElementException, ElementNotInteractableException
 from urllib.request import urlretrieve
@@ -18,7 +19,11 @@ import xml.etree.ElementTree as ET
 import datetime
 import json
 import utils
-import colors
+import logging
+# import colors
+import os
+
+logging.basicConfig(level=logging.DEBUG)
 
 # Gather all possible URLS on the site.
 # TO-DO: Make it so that the script automatically pulls the sitemap, in case the site gets updated.
@@ -67,15 +72,25 @@ test_urls = [
     "https://stash.clash.gg/skin/60/AK-47-Jungle-Spray",
 ]
 
+DATA_DIR = "./data-collector/data"
+IMAGE_DIR = os.path.join(DATA_DIR, "/images")
 
+# FOR SOME REASON, IT CAN'T FIND THE FUCKING FIREFOX EXEC
 def runCrawl(browser="firefox", skip_id=0):
+    os.umask(0)
+    os.makedirs(DATA_DIR, exist_ok=True, mode=0o777)
+
+    service = Service("/snap/bin/firefox.geckodriver", port=0)
     if browser == "firefox":
-        driver = webdriver.Firefox()
+        driver = webdriver.Firefox(service=service)
     elif browser == "chrome":
+        logging.info("Running Chrome driver...")
         driver = webdriver.Chrome()
     id_number = 0
     all_skins, skin_urls = [], []
-    all_urls = utils.getAllUrls()
+
+    logging.debug("TEST")
+    all_urls = utils.getAllUrls(browser=browser)
     # all_urls = test_urls
     for url in all_urls:
         if "/skin/" in url:
@@ -84,156 +99,167 @@ def runCrawl(browser="firefox", skip_id=0):
     # all_urls = test_urls # For testing purposes
     # skin_urls = test_urls
     # print(skin_urls)
-    for url in skin_urls:
-        if id_number < skip_id:
-            id_number += 1
-            continue
-        # For each skin URL, create a dictionary that represents the skin (Maybe give the skin an ID or something?)
-        skin = {'id': id_number}
-        skin["url"] = url
-
-        # Navigate to the page
-        driver.get(url)
-        sleep(randint(5, 8))
-
-        # Grab skin info
-        skin_info = driver.find_element(By.CSS_SELECTOR, ".skin-misc-details")
-        # Check the name and weapon...
-        skin["weapon"] = driver.find_element(By.CSS_SELECTOR, "div.well:nth-child(1) > h1:nth-child(1) > a:nth-child(1)").text
-        skin["name"] = driver.find_element(By.CSS_SELECTOR, "div.well:nth-child(1) > h1:nth-child(1) > a:nth-child(2)").text
-        # Check if stattrack or souvenir is available
-        if "Souvenir Available" in driver.page_source:
-            skin["souvenir"] = True
-        else:
-            skin["souvenir"] = False
-        if "StatTrak Available" in driver.page_source:
-            skin["stattrak"] = True
-        else:
-            skin["stattrak"] = False
-
-        # Get the rarity
-        skin["rarity"] = utils.getRarity(driver.find_element(By.CSS_SELECTOR, ".quality > p:nth-child(1)").text)
-
-        # Check the min and max wear values
-        if "★ (Vanilla)" not in skin["name"]:
-            skin["minwear"] = driver.find_element(By.CSS_SELECTOR, 'div.marker-wrapper:nth-child(1)').get_attribute("data-wearmin")
-            skin["maxwear"] = driver.find_element(By.CSS_SELECTOR, 'div.marker-wrapper:nth-child(2)').get_attribute("data-wearmax")
-
-            # Get finish style
-            style = driver.find_element(By.XPATH, "//strong[text()='Finish Style:']/parent::p/span")
-            skin["finish-style"] = style.text
-        else:
-            # In this case, min, max, and finish don't apply to Vanilla knives
-            skin["minwear"] = None
-            skin["maxwear"] = None
-            skin["finish-style"] = None
-
-        # Get weapon category
-        skin["weapon-category"] = utils.getWeaponCategory(driver.find_element(By.CSS_SELECTOR, ".quality > p:nth-child(1)").text)
-
-        # Get cases
-        # driver.find_element(By.CSS_SELECTOR, "#knife-cases-collapse")
-        try:
-            driver.find_element(By.CSS_SELECTOR, ".cl-popup-close").click()
-            sleep(1)
-        except NoSuchElementException as e:
-            print(e)
-        except ElementNotInteractableException as e:
-            print("No popup @", url)
-        try:
-            driver.find_element(By.CSS_SELECTOR, ".collapse-chevron").click()
-            sleep(2)
-        except NoSuchElementException as e:
-            print("No case-collapse button @", url)
-        casesAndCollections = driver.find_elements(By.CLASS_NAME, "collection-text-label")
-        cases, collections, prominent_colors = [], [], []
-        for el in casesAndCollections:
-            if "Case" in el.text:
-                cases.append(el.text)
-            elif "Collection" in el.text:
-                collections.append(el.text)
-        skin["cases"] = cases
-        skin["collections"] = collections
-
-        # Download the image
-        img = driver.find_element(By.CSS_SELECTOR, ".main-skin-img")
-        src = img.get_attribute("src")
-        file_end = str(id_number) + '-' + skin["weapon"] + " " + skin["name"] + '.png'
-        urlretrieve(src, 'data-collector/data/images/' + file_end)
-        # Get the prominent colors
-        skin["prominent-colors"] = colors.getProminentColors('data-collector/data/images/' + file_end)
-
-        # Get price data
-        prices = {}
-        dom_prices = driver.find_element(By.ID, "prices")
-        for price_row in dom_prices.find_elements(By.CSS_SELECTOR, ".btn-group-sm.btn-group-justified"):
-            # Check if a valid row
-            condition = price_row.find_elements(By.CSS_SELECTOR, ".pull-left")
-            if len(condition) < 1:
+    logging.debug(skin_urls)
+    try:
+        for url in skin_urls:
+            if id_number < skip_id:
+                id_number += 1
                 continue
-            condition_text = ""
-            for c in condition:
-                if c.text == "Souvenir" or c.text == "StatTrak":
+            # For each skin URL, create a dictionary that represents the skin (Maybe give the skin an ID or something?)
+            skin = {'id': id_number}
+            skin["url"] = url
+            skin["url_id"] = url.split('/')[4]
+            # skin["url_id"] = url.split('/')[]
+
+            # Navigate to the page
+            driver.get(url)
+            sleep(randint(5, 8))
+
+            # Grab skin info
+            skin_info = driver.find_element(By.CSS_SELECTOR, ".skin-misc-details")
+            # Check the name and weapon...
+            skin["weapon"] = driver.find_element(By.CSS_SELECTOR, "div.well:nth-child(1) > h1:nth-child(1) > a:nth-child(1)").text
+            skin["name"] = driver.find_element(By.CSS_SELECTOR, "div.well:nth-child(1) > h1:nth-child(1) > a:nth-child(2)").text
+            # Check if stattrack or souvenir is available
+            if "Souvenir Available" in driver.page_source:
+                skin["souvenir"] = True
+            else:
+                skin["souvenir"] = False
+            if "StatTrak Available" in driver.page_source:
+                skin["stattrak"] = True
+            else:
+                skin["stattrak"] = False
+
+            # Get the rarity
+            skin["rarity"] = utils.getRarity(driver.find_element(By.CSS_SELECTOR, ".quality > p:nth-child(1)").text)
+
+            # Check the min and max wear values
+            if ("★" not in skin["name"]) and ("Vanilla" not in url):
+                skin["minwear"] = driver.find_element(By.CSS_SELECTOR, 'div.marker-wrapper:nth-child(1)').get_attribute("data-wearmin")
+                skin["maxwear"] = driver.find_element(By.CSS_SELECTOR, 'div.marker-wrapper:nth-child(2)').get_attribute("data-wearmax")
+
+                # Get finish style
+                style = driver.find_element(By.XPATH, "//strong[text()='Finish Style:']/parent::p/span")
+                skin["finish-style"] = style.text
+            else:
+                # In this case, min, max, and finish don't apply to Vanilla knives
+                skin["minwear"] = None
+                skin["maxwear"] = None
+                skin["finish-style"] = None
+
+            # Get weapon category
+            skin["weapon-category"] = utils.getWeaponCategory(driver.find_element(By.CSS_SELECTOR, ".quality > p:nth-child(1)").text)
+
+            # Get cases
+            # driver.find_element(By.CSS_SELECTOR, "#knife-cases-collapse")
+            try:
+                driver.find_element(By.CSS_SELECTOR, ".cl-popup-close").click()
+                sleep(1)
+            except NoSuchElementException as e:
+                logging.info(e)
+            except ElementNotInteractableException as e:
+                logging.info("No popup @", url)
+            try:
+                driver.find_element(By.CSS_SELECTOR, ".collapse-chevron").click()
+                sleep(2)
+            except NoSuchElementException as e:
+                # logging.info("No case-collapse button @", url)
+                print("No case-collapse button @", url)
+            casesAndCollections = driver.find_elements(By.CLASS_NAME, "collection-text-label")
+            cases, collections, prominent_colors = [], [], []
+            for el in casesAndCollections:
+                if "Case" in el.text:
+                    cases.append(el.text)
+                elif "Collection" in el.text:
+                    collections.append(el.text)
+            skin["cases"] = cases
+            skin["collections"] = collections
+
+            # Download the image
+            img = driver.find_element(By.CSS_SELECTOR, ".main-skin-img")
+            src = img.get_attribute("src")
+            if url != 'https://stash.clash.gg/skin/1609/USP-S-027':
+                file_end = str(skin['url_id']) + '-' + skin["weapon"] + " " + skin["name"] + '.png'
+            else:
+                continue
+            # os.makedirs(IMAGE_DIR, exist_ok=True, mode=0o777) # Make sure the data/images folder exists, create the images folder if it doesn't
+            # TODO: Make a script that will create all necessary directories for the crawler
+            urlretrieve(src, 'data-collector/data/images/' + file_end)
+            # Get the prominent colors
+            skin["prominent-colors"] = ['TO BE REPLACED BY MANUAL LABELING'] #  colors.getProminentColors('data-collector/data/images/' + file_end)
+
+            # Get price data
+            prices = {}
+            dom_prices = driver.find_element(By.ID, "prices")
+            for price_row in dom_prices.find_elements(By.CSS_SELECTOR, ".btn-group-sm.btn-group-justified"):
+                # Check if a valid row
+                condition = price_row.find_elements(By.CSS_SELECTOR, ".pull-left")
+                if len(condition) < 1:
                     continue
+                condition_text = ""
+                for c in condition:
+                    if c.text == "Souvenir" or c.text == "StatTrak":
+                        continue
+                    else:
+                        condition_text = c.text
+                stat_price = price_row.find_elements(By.CSS_SELECTOR, ".price-details-st")
+                souv_price = price_row.find_elements(By.CSS_SELECTOR, ".price-details-souv")
+                price = price_row.find_element(By.CSS_SELECTOR, ".pull-right").text
+                if "$" in price:
+                    price = float(price.split("$")[1].replace(",", ""))
                 else:
-                    condition_text = c.text
-            stat_price = price_row.find_elements(By.CSS_SELECTOR, ".price-details-st")
-            souv_price = price_row.find_elements(By.CSS_SELECTOR, ".price-details-souv")
-            price = price_row.find_element(By.CSS_SELECTOR, ".pull-right").text
-            if "$" in price:
-                price = float(price.split("$")[1].replace(",", ""))
+                    price = None
+                if len(stat_price) == 1:
+                    prices[stat_price[0].text + " " + condition_text] = price
+                elif len(souv_price) == 1:
+                    prices[souv_price[0].text + " " + condition_text] = price
+                else:
+                    prices[condition_text] = price
+            skin["prices"] = prices
+
+            # Check if added via operation
+            operation = driver.find_elements(By.PARTIAL_LINK_TEXT, "Operation")
+            if len(operation) > 0:
+                skin["via-operation"] = True
             else:
-                price = None
-            if len(stat_price) == 1:
-                prices[stat_price[0].text + " " + condition_text] = price
-            elif len(souv_price) == 1:
-                prices[souv_price[0].text + " " + condition_text] = price
-            else:
-                prices[condition_text] = price
-        skin["prices"] = prices
+                skin["via-operation"] = False
 
-        # Check if added via operation
-        operation = driver.find_elements(By.PARTIAL_LINK_TEXT, "Operation")
-        if len(operation) > 0:
-            skin["via-operation"] = True
-        else:
-            skin["via-operation"] = False
+            # Check year added
+            # skin["year"] = int(driver.find_element(By.CSS_SELECTOR, ".skin-misc-details > p:nth-child(6) > span:nth-child(2)").text.split(" ")[2])
+            skin["year"] = int(utils.extractYear(skin_info.text))
+            
+            # Check if made by Valve
+            '''
+            NOTE: Some skins don't seem to have the 'Creator' row on their page. 
+            I'm going to leave it like this for now, where if a page doesn't have it, we assume that it wasn't made by Valve.
+            Maybe that will bite me in the ass later.
+            I added a Bandaid solution where marked with a devil emoji (😈)
+            '''
+            skin["made-by-valve"] = "Valve" in skin_info.text
 
-        # Check year added
-        # skin["year"] = int(driver.find_element(By.CSS_SELECTOR, ".skin-misc-details > p:nth-child(6) > span:nth-child(2)").text.split(" ")[2])
-        skin["year"] = int(utils.extractYear(skin_info.text))
-        
-        # Check if made by Valve
-        '''
-        NOTE: Some skins don't seem to have the 'Creator' row on their page. 
-        I'm going to leave it like this for now, where if a page doesn't have it, we assume that it wasn't made by Valve.
-        Maybe that will bite me in the ass later.
-        I added a Bandaid solution where marked with a devil emoji (😈)
-        '''
-        skin["made-by-valve"] = "Valve" in skin_info.text
+            # Check if it has flavor text
+            body = driver.find_element(By.TAG_NAME, "body").text
+            skin["has-flavor-text"] = "Flavor Text:" in body
 
-        # Check if it has flavor text
-        body = driver.find_element(By.TAG_NAME, "body").text
-        skin["has-flavor-text"] = "Flavor Text:" in body
-
-        # Once you have all the data, place the skin into a list
-        all_skins.append(skin)
-        # Write out the list to save progress
-        with open("./data-collector/data/skins_temp_data.json", "w") as json_file:
-            json.dump(all_skins, json_file, indent=4)
-        # Update the ID
-        id_number += 1
-
-    # When finished, write out to a timestamped file
-    with open("./data-collector/data/skins_data" + datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S") + ".json", "w") as json_file:
-            json.dump(all_skins, json_file, indent=4)
-    driver.quit()
-# For color extraction: can find RGB with this: https://www.geeksforgeeks.org/python-pillow-colors-on-an-image/
-# then can use something like https://pypi.org/project/webcolors/ to transfer into a string.
-# Would probably need to simplify the colors down further.
-
+            # Once you have all the data, place the skin into a list
+            all_skins.append(skin)
+            # Write out the list to save progress
+            with open("./data-collector/data/skins_temp_data.json", "w") as json_file:
+                json.dump(all_skins, json_file, indent=4)
+            # Update the ID
+            id_number += 1
+    except: 
+        logging.error("Something has gone wrong")
+    finally:
+        # When the crawler stops, write out to a file
+        with open("./data-collector/data/skins_data" + datetime.datetime.now().strftime("%Y-%m-%d %H-%M-%S") + ".json", "w") as json_file:
+                json.dump(all_skins, json_file, indent=4)
+        driver.quit()
 
 # Note: Skipping USPS | 027, seems to be broken (id 1566)
 
 if __name__ == '__main__':
-    runCrawl(browser="firefox", skip_id=1567)
+    # runCrawl(browser="chrome", skip_id=1567)
+    # runCrawl(browser="chrome", skip_id=938)
+    runCrawl(browser="chrome", skip_id=991)
+    # runCrawl(browser="chrome", skip_id=0)
