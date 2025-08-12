@@ -2,7 +2,7 @@ import mysql.connector
 import random
 import json
 import pandas as pd
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import constants
 import utils
 
@@ -114,7 +114,7 @@ def generateBoard():
     # for i in range(0, 2):
     #     board_questions.append(createQuestions(3))
 
-    VALID_RANGE = [5, 100]
+    VALID_RANGE = [1, 200]
     """This function will query and use helper functions to verify that a given cell is valid"""
     """Returns True if the number of rows is within the VALID_RANGE"""
     def verifyCell(question1, question2):
@@ -207,8 +207,8 @@ def generateBoard():
             available_cats.extend(cats_used)
         attempts += 1
         print("Number of solid cols: ", len(col_questions), "Attempts:", attempts)
-        import time
-        time.sleep(0.5)
+        # import time
+        # time.sleep(0.5)
     print(row_questions, col_questions)
     return row_questions, col_questions
     # print(board_cell_questions[0][0])
@@ -227,11 +227,15 @@ df = pd.Series([])
 # plt.hist(df, bins=1500)
 # plt.show()
 
+'''
+    Insert data from crawler into database
+'''
 def importCrawlData():
     def insert_data(conn, skin):
         """Inserts a skin into the DB"""
         id = skin['id']
         url = skin['url']
+        url_id = skin['url_id']
         weapon = skin['weapon']
         name = skin['name']
         souvenir = skin['souvenir']
@@ -249,20 +253,17 @@ def importCrawlData():
         year = skin['year']
         valve = skin['made-by-valve']
         text = skin['has-flavor-text']
-        query = "INSERT INTO skins_data (id, url, weapon, skin_name, souvenir, stattrak, rarity, minwear, maxwear, finish, weapon_category, cases, collections, colors, prices, operation, year_added, by_valve, flavor_text) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+        query = "INSERT INTO skins_data (id, url, url_id, weapon, skin_name, souvenir, stattrak, rarity, minwear, maxwear, finish, weapon_category, cases, collections, colors, prices, operation, year_added, by_valve, flavor_text) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
         cursor = conn.cursor()
         try:
-            cursor.execute(query, (id, url, weapon, name, souvenir, stattrak, rarity, minwear, maxwear, finish, weapon_cat, cases, collections, colors, prices, operation, year, valve, text))
+            cursor.execute(query, (id, url, url_id, weapon, name, souvenir, stattrak, rarity, minwear, maxwear, finish, weapon_cat, cases, collections, colors, prices, operation, year, valve, text))
             conn.commit()
             print(f"✅ Added skin ID: {id})")
         except mysql.connector.Error as e:
             print(f"❌ Error inserting data: {e}")
-    with open('backend/crawl-data.json', 'r') as file:
+    with open(constants.CRAWL_DATA_DIR, 'r') as file:
         conn = utils.connect_db()
         if conn:
             data = json.load(file)
             for entry in data:
                 insert_data(conn=conn, skin=entry)
-
-
-# print(importCrawlData())

@@ -3,6 +3,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+BOARD_DIR = 'board.json'
+SKIN_NAMES_DIR = 'all_possible_skins.json'
+CRAWL_DATA_DIR = 'crawl-data.json'
+
 # Database connection details
 DB_CONFIG = {
     "host": os.getenv("DB_HOST"),   # Change to your MySQL host
@@ -30,9 +34,10 @@ LANGUAGE = {
     'STARTSWITH' : {
         'startswith' : 'Name starts with '
     },
-    'COLOR' : {
-        'has' : "Has the color "
-    },
+    # TEMPORALILY REMOVING COLOR OPTION
+    # 'COLOR' : {
+    #     'has' : "Has the color "
+    # },
     'WEAPON' : {
         'is' : 'For the '
     },
@@ -97,13 +102,13 @@ QUESTIONS = {
         'startswith F',
         'startswith P',
     ],
-    'COLOR' : [
-        # 'has green',
-        # 'has blue',
-        'has red',
-        # 'has yellow',
-        'has purple',
-    ],
+    # 'COLOR' : [
+    #     # 'has green',
+    #     # 'has blue',
+    #     # 'has red',
+    #     # 'has yellow',
+    #     # 'has purple',
+    # ],
     'WEAPON' : [
         "is AK-47",
         "is AUG",
@@ -196,6 +201,7 @@ QUESTIONS = {
         'under 0.5',
     ],
     'YEAR' : [
+        'equals 2025',
         'equals 2024',
         'equals 2023',
         'equals 2022',

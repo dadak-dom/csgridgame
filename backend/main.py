@@ -17,9 +17,9 @@ import os
 import jq
 import utils
 import constants
+import logging
 
-BOARD_DIR = 'board.json'
-SKIN_NAMES_DIR = 'all_possible_skins.json'
+logging.basicConfig(level=logging.DEBUG)
 
 load_dotenv()
 
@@ -99,13 +99,32 @@ def generateBoard():
         json.dump([getPossibleAnswers(board_fill_queries), trans_rows, trans_cols], f)
 
 def getBoard():
-    with open(BOARD_DIR, 'r') as board:
+    with open(constants.BOARD_DIR, 'r') as board:
         return json.load(board)
+    
+'''
+ Create the 'all_possible_skins.json' file
+ Should be done at startup
+'''
+def setAllPossibleSkins():
+    skin_names = []
+    with open(constants.CRAWL_DATA_DIR, 'r', encoding='utf8') as crawl_data:
+        # logging.info(crawl_data.read())
+        skin_data = json.load(crawl_data)        
+        for skin in skin_data:
+            skin_names.append({"weapon_name" : f"{skin['weapon']} | {skin['name']}"})
+    # Delete the old file, if it already exists:
+    if os.path.exists(constants.SKIN_NAMES_DIR):
+        logging.info(f"{constants.SKIN_NAMES_DIR} already exists, DELETING then REGENING...")
+        os.remove(constants.SKIN_NAMES_DIR)
+    with open(constants.SKIN_NAMES_DIR, 'w', encoding='utf-8') as f:
+        json.dump(skin_names, f)
+    
 
 @app.get("/all_skins/")
 def getAllPossibleSkins():
     output = []
-    with open(SKIN_NAMES_DIR, 'r', encoding='utf8') as names:
+    with open(constants.SKIN_NAMES_DIR, 'r', encoding='utf8') as names:
         weapons = json.load(names)
         for w in weapons:
             output.append(w['weapon_name'])
@@ -130,8 +149,9 @@ def read_root():
 
 @app.on_event("startup")
 async def startup_event():
-    if not os.path.exists(BOARD_DIR):
+    if not os.path.exists(constants.BOARD_DIR):
         generateBoard()
+    setAllPossibleSkins()
 
 @app.on_event("shutdown")
 def shutdown_event():
@@ -139,12 +159,12 @@ def shutdown_event():
 
 @app.get("/board/")
 def get_board():
-    print("Getting board...")
+    logging.info("Getting board...")
     return {"board" : getBoard()[0], "row_queries" : getBoard()[1], "col_queries" : getBoard()[2]}
 
 @app.get("/genboard/")
 def gen_board():
-    print("Generating new board...")
+    logging.info("Generating new board...")
     generateBoard()
 
 # @app.get("/items/{item_id}")
@@ -152,7 +172,7 @@ def gen_board():
 #     return {"item_id": item_id, "q": q}
 
 def sortWeaponsByPrice(weapon_list):
-    with open("crawl-data.json") as f:
+    with open(constants.CRAWL_DATA_DIR) as f:
         data = json.load(f)
     
     prices = {}
@@ -165,11 +185,11 @@ def sortWeaponsByPrice(weapon_list):
         max_key, max_value = max(result.items(), key=lambda item: item[1] if item[1] is not None else float('-inf'))
         # Store the weapon in a dict with the price as value
         prices[weapon] = max_value
-        print(max_value)
+        # print(max_value)
     # Sort the entire dict, return the KEYS in order
     sorted_prices = dict(sorted(prices.items(), key=lambda item: item[1], reverse=True))
-    print('Heres the dict', sorted_prices)
-    print('Heres the keyes only', sorted_prices.keys())
+    # print('Heres the dict', sorted_prices)
+    logging.debug(f'Sorted weapon names by price for new board: {sorted_prices.keys()}')
     return list(sorted_prices.keys())
         
 
@@ -230,3 +250,7 @@ async def getSkinImage(skin_name):
         location = find_files_in_folder(os.path.join(os.getcwd(), 'images'), matching)[0]
         return FileResponse(location)
 
+# NOTE: FOR TEMPORARY TESTING PURPOSES ONLY. DO NOT ALLOW THIS INTO PROD!!!
+@app.get("/import-data/")
+def importData():
+    gridgen.importCrawlData()
