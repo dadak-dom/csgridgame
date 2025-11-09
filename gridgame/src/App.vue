@@ -1,16 +1,21 @@
 <script setup>
 import GameBoard from "./components/GameBoard.vue";
-import HelloWorld from "./components/HelloWorld.vue";
 import SearchAutocomplete from "./components/SearchAutocomplete.vue";
+import BackgroundAnimation from "./components/BackgroundAnimation.vue";
+import Tutorial from "./components/Tutorial.vue";
+
+// const SERVER_URL = process.env.GRIDGAME_SERVER_URL;
 </script>
 
 <template>
+  <!-- <BackgroundAnimation /> -->
   <div id="app">
     <GameBoard />
-    <button @click="fetchBoard">Fetch board</button>
+    <!-- <button @click="fetchBoard">Fetch board</button>
     <button @click="genBoard">Generate new board</button>
-    <button @click="queryCheck">Check queries</button>
-    <p v-if="data">{{ data }}</p>
+    <button @click="queryCheck">Check queries</button> -->
+    <!-- <p v-if="data">{{ data }}</p> -->
+     <Tutorial />
   </div>
 </template>
 
@@ -22,27 +27,28 @@ export default {
     GameBoard,
   },
   methods: {
-    async fetchBoard() {
-      const response = await fetch("http://127.0.0.1:8000/board");
-      console.log(await response.json());
-      this.data = response;
-    },
-    genBoard() {
-      fetch("http://127.0.0.1:8000/genboard");
-    },
-    queryCheck() {
-      fetch("http://127.0.0.1:8000/queries").then((response) => {
-        response.json().then((value) => {
-          console.log(value);
-        });
-      });
-    },
+    // async fetchBoard() {
+    //   const response = await fetch(SERVER_URL + "board");
+    //   console.log(await response.json());
+    //   this.data = response;
+    // },
+    // genBoard() {
+    //   fetch(SERVER_URL + "genboard");
+    // },
+    // queryCheck() {
+    //   fetch(SERVER_URL + "queries").then((response) => {
+    //     response.json().then((value) => {
+    //       console.log(value);
+    //     });
+    //   });
+    // },
   },
 };
 </script>
 
 <style scoped>
-.logo {
+/* TODO: Add mobile styling */
+/* .logo {
   height: 6em;
   padding: 1.5em;
   will-change: filter;
@@ -53,5 +59,5 @@ export default {
 }
 .logo.vue:hover {
   filter: drop-shadow(0 0 2em #42b883aa);
-}
+} */
 </style>

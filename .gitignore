@@ -2,5 +2,8 @@
 data-collector/data
 data-collector/__pycache__
 backend/__pycache__
+backend/src/__pycache__
+backend/src/modules/__pycache__
 .env
 backend/images
+.vscode/
