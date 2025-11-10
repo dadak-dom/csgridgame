@@ -23,6 +23,8 @@ COPY ./src ./src
 COPY ./boards ./boards
 COPY ./images ./images
 
+EXPOSE 8000
+
 
 CMD ["fastapi", "run", "src/main.py", "--port", "8000"]
 # CMD ["ls"]
