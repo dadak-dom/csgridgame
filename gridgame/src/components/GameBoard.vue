@@ -2,10 +2,6 @@
 import { ref, onMounted } from "vue";
 import SkinSquare from "./SkinSquare.vue";
 import PastBoards from "./PastBoards.vue";
-import dotenv from "dotenv";
-// import SearchAutocomplete from "./SearchAutocomplete.vue";
-// import SkinImage from "./SkinImage.vue";
-// defineEmits(["onWrongGuess", "onRightGuess"]);
 defineProps({
   msg: String,
 });
@@ -14,23 +10,11 @@ defineProps({
 
 // const SERVER_URL = process.env.GRIDGAME_SERVER_URL;
 const SERVER_URL = import.meta.env.VITE_GRIDGAME_SERVER_URL;
-// const SERVER_URL = "http://localhost:8000/"
 
 const MAX_GUESSES = 10;
 
-// const count = ref(0);
 var test = ref(false);
-// TODO: THIS IS IMPORTANT!!! Need to implement the ability to store game states for 
-// a board to localStorage and then RETRIEVE IT!!!
-// will need to add the following:
-/*
-- When a user visits / requests a certain board, check if it was in their local storage
-    - if yes, restore the state that it was in - that means that most values that I assume are probably going to need to be recovered somehow
-    - otherwise, just start from default (everything empty)
-- Ability for users on the frontend to select past boards
-*/
-// also TODO: Refactor the code so that the square itself is actually emitting the right/wrong guess events,
-// might need to change how I approach event emitting
+
 const GameState = ref(null);
 
 /*
@@ -62,23 +46,21 @@ const BOOL_DEFAULT = [
 ];
 
 const STRING_DEFAULT = [
-  ['', '', ''],
-  ['', '', ''],
-  ['', '', ''],
-]
+  ["", "", ""],
+  ["", "", ""],
+  ["", "", ""],
+];
 
-const NULL_DEFAULT =  [
+const NULL_DEFAULT = [
   [null, null, null],
   [null, null, null],
-  [null, null, null]
-]
-
-const alreadyGuessedCorrectly = ref([]); // TODO: Implement keeping track of the skins that have already been guessed correctly. 
+  [null, null, null],
+];
 
 const backgroundColors = ref([
-  ['', '', ''],
-  ['', '', ''],
-  ['', '', ''],
+  ["", "", ""],
+  ["", "", ""],
+  ["", "", ""],
 ]);
 
 const shakeAnimation = ref([
@@ -90,7 +72,7 @@ const shakeAnimation = ref([
 const imageHTML = ref([
   [null, null, null],
   [null, null, null],
-  [null, null, null]
+  [null, null, null],
 ]);
 
 const dailyBoardName = ref("");
@@ -101,62 +83,56 @@ const currentBoardString = ref("");
 const currentParsedBoardString = ref("");
 const currentBoardFileName = ref("");
 
-function toggleTest() {
-  test.value = !test.value;
-}
-
 const guesses = ref(MAX_GUESSES);
-const already_guessed = ref([]);
-
 
 /**
  * Save an item to local storage
- * 
+ *
  * @param key - key for storage
  * @param value - value you want to store, ideally in JSON format
  */
 function putItem(key, value) {
   // localStorage.setItem(key, value);
   const boardData = {
-    data : value
-  }
+    data: value,
+  };
   let openRequest = indexedDB.open("SkinsDatabase", 1);
 
-  openRequest.onupgradeneeded = function() {
+  openRequest.onupgradeneeded = function () {
     console.log("UPGRADING DB!");
     let db = openRequest.result;
-    if (!db.objectStoreNames.contains('boards')) { // if there's no "boards" store
-      let objectStore = db.createObjectStore('boards'); // create it
-  }
-};
-  
-  openRequest.onerror = function() {
-    console.error("Error: ", openRequest.error);
-  }
+    if (!db.objectStoreNames.contains("boards")) {
+      // if there's no "boards" store
+      let objectStore = db.createObjectStore("boards"); // create it
+    }
+  };
 
-  openRequest.onsuccess = function() {
+  openRequest.onerror = function () {
+    console.error("Error: ", openRequest.error);
+  };
+
+  openRequest.onsuccess = function () {
     let db = openRequest.result;
     // db.createObjectStore("boards", {keyPath : key})// can only be done when upgrading version
-    const tx = db.transaction('boards', 'readwrite');
-    const store = tx.objectStore('boards');
+    const tx = db.transaction("boards", "readwrite");
+    const store = tx.objectStore("boards");
 
     const putRequest = store.put(boardData, key);
 
     putRequest.onsuccess = () => {
       console.log("Saved: ", key, "successfully!");
-    }
+    };
 
-    putRequest.onerror= () => {
+    putRequest.onerror = () => {
       console.error("error, ", putRequest.onerror);
-    }
-
-  }
+    };
+  };
 }
 
 /**
- * 
+ *
  * Check if an item exists in localStorage
- * 
+ *
  * @param key - key in localStorage
  */
 function exists(key) {
@@ -192,50 +168,22 @@ function exists(key) {
   });
 }
 
-
 /**
- * 
+ *
  * Retrieve an item from localStorage
- * 
+ *
  * @param key - key in localStorage
  */
 function get(key) {
   return JSON.parse(localStorage.getItem(key));
-  return new Promise((resolve, reject) => {
-    const openRequest = indexedDB.open("SkinsDatabase", 1);
-
-    openRequest.onerror = () => {
-      console.error("Error opening DB", openRequest.error);
-      reject(openRequest.error);
-    };
-
-    openRequest.onupgradeneeded = function () {
-      const db = openRequest.result;
-      if (!db.objectStoreNames.contains("boards")) {
-        db.createObjectStore("boards");
-      }
-    };
-
-    openRequest.onsuccess = function () {
-      const db = openRequest.result;
-      const tx = db.transaction("boards", "readonly");
-      const store = tx.objectStore("boards");
-      const getRequest = store.get(key);
-
-      getRequest.onsuccess = () => {
-        const d = getRequest.result;
-        resolve(d.data); // true if value found, false if null/undefined
-      };
-
-      getRequest.onerror = () => {
-        reject(getRequest.error);
-      };
-    };
-  });
 }
 
-function get2(key) {
-  // return JSON.parse(localStorage.getItem(key));
+/**
+ * Retrieve an item from IndexedDB
+ *
+ * @param key - key in the db
+ */
+function getFromIDB(key) {
   return new Promise((resolve, reject) => {
     const openRequest = indexedDB.open("SkinsDatabase", 1);
 
@@ -258,9 +206,8 @@ function get2(key) {
       const getRequest = store.get(key);
 
       getRequest.onsuccess = () => {
-        
         const d = getRequest.result;
-        console.log("Running get2 on key: ", key ," result: ", d)
+        console.log("Running getFromIDB on key: ", key, " result: ", d);
         resolve(d.data);
       };
 
@@ -318,18 +265,18 @@ document.addEventListener("userGuessed", (e) => {
     "board_data",
     board_data
   );
-  
+
   const right_answers = board_data.value["board"][e.detail.row][e.detail.col];
   console.log("Right answers: ", right_answers);
   const index = right_answers.indexOf(e.detail.name);
 
   if (guesses.value <= 0) {
-      for (let r = 0; r < searchDisable.value.length; r++) {
-        for (let c = 0; c < searchDisable.value[r].length; c++) {
-          searchDisable.value[r][c] = true;
-        }
+    for (let r = 0; r < searchDisable.value.length; r++) {
+      for (let c = 0; c < searchDisable.value[r].length; c++) {
+        searchDisable.value[r][c] = true;
       }
     }
+  }
 
   if (index === -1) {
     // emit("onWrongGuess");
@@ -388,15 +335,12 @@ document.addEventListener(
       // console.log("TIMEOUT DONE");
       // console.log("Shake animation after:", shakeAnimation.value);
     }, 500);
-    
-    // TODO: I want to be able to save the state of my board to localStorage, so that every time a "move" is made, and the user refreshes/looks at another board
-    // or something, their status is saved
 
     // Save the state of guess count and searchDisable
     const pre = currentBoardFileName.value;
-    putItem(pre + '-guesses', JSON.stringify(guesses.value));
-    console.log("Search disable test", searchDisable.value)
-    putItem(pre + '-searchDisable', JSON.stringify(searchDisable.value));
+    putItem(pre + "-guesses", JSON.stringify(guesses.value));
+    console.log("Search disable test", searchDisable.value);
+    putItem(pre + "-searchDisable", JSON.stringify(searchDisable.value));
   }
 );
 
@@ -413,27 +357,19 @@ document.addEventListener("onRightGuess", (e) => {
     e.detail.index
   );
   var skin_name = e.detail.name.replace(" | ", "_").replace(" ", "_");
-  // console.log("SKIN NAME CLEANED: ", skin_name);
-  // FIXME: This fetch is not necessary. Remove it
-  // fetch(SERVER_URL + "get_skin_image/" + skin_name)
-  //   .then((response) => response.blob())
-  //   .then((imageBlob) => {
-  //     const imageUrl = URL.createObjectURL(imageBlob);
 
-      const element = document.getElementById(
-        rowColtoString(row, col) + "-img" // get the ID for the corresponding image component
-      );
+  const element = document.getElementById(
+    rowColtoString(row, col) + "-img" // get the ID for the corresponding image component
+  );
 
-      searchDisable.value[row][col] = true;
+  searchDisable.value[row][col] = true;
 
-      console.log("ELEMENT", element)
+  console.log("ELEMENT", element);
 
-      if (element) {
-        const img = document.createElement("img");
-
-        // img.src = imageUrl;
-        img.src = SERVER_URL + "get_skin_image/" + skin_name;
-        /*
+  if (element) {
+    const img = document.createElement("img");
+    img.src = SERVER_URL + "get_skin_image/" + skin_name;
+    /*
         #1 best choice would be Gold (like knife)
         Top 5% would be Red (Covert)
         Top 10% would be Pink (Classified)
@@ -447,67 +383,73 @@ document.addEventListener("onRightGuess", (e) => {
         or
         index / num_possible < some threshold
         */
-        const index = e.detail.index;
-        const num_possible = e.detail.num_possible;
+    const index = e.detail.index;
+    const num_possible = e.detail.num_possible;
 
-        // img.style.height = "30%";
-        // img.style.width = "auto";
-        // img.style.maxWidth = "200px";
+    // img.style.height = "30%";
+    // img.style.width = "auto";
+    // img.style.maxWidth = "200px";
 
-        img.style.width = "100%";
-        img.style.marginTop = "10%";
+    img.style.width = "100%";
+    img.style.marginTop = "10%";
 
-        var color = "#ffffff"; // default to white
+    var color = "#ffffff"; // default to white
 
-        if (index === 1) {
-          color = "#b39700";
-        } else if (index / num_possible <= 0.1) {
-          color = "#921010";
-        } else if (index / num_possible <= 0.2) {
-          color = "#8d129a";
-        } else if (index / num_possible <= 0.4) {
-          color = "#38009d";
-        } else if (index / num_possible <= 0.6) {
-          color = "#001a9c";
-        } else if (index / num_possible <= 0.8) {
-          color = "#1f4e83";
-        } else {
-          color = "#636b6d";
-        }
-        // TODO: Change this logic so that it passes the background color as a prop to the SkinSquare template
-        // element.style.backgroundColor = color;
-        backgroundColors.value[row][col] = color;
-        console.log("New background color info: ", backgroundColors.value[row][col]);
-        // img.style.resize = "10%";
+    if (index === 1) {
+      color = "#b39700";
+    } else if (index / num_possible <= 0.1) {
+      color = "#921010";
+    } else if (index / num_possible <= 0.2) {
+      color = "#8d129a";
+    } else if (index / num_possible <= 0.4) {
+      color = "#38009d";
+    } else if (index / num_possible <= 0.6) {
+      color = "#001a9c";
+    } else if (index / num_possible <= 0.8) {
+      color = "#1f4e83";
+    } else {
+      color = "#636b6d";
+    }
 
-        element.appendChild(img);
-        console.log("IMAGE ELEMENT: ", img);
-        imageHTML.value[row][col] = img.outerHTML;
+    backgroundColors.value[row][col] = color;
+    console.log(
+      "New background color info: ",
+      backgroundColors.value[row][col]
+    );
 
-        console.log("imageHTML", imageHTML.value[row][col],
-          "outer ", img.outerHTML
-        )
+    element.appendChild(img);
+    console.log("IMAGE ELEMENT: ", img);
+    imageHTML.value[row][col] = img.outerHTML;
 
-        // save everything at the end
-        const save_prefix = currentBoardFileName.value;
-        // putItem(`${save_prefix}-guesses`, guesses.value);
-        // putItem(`${save_prefix}-searchDisable`, JSON.stringify(searchDisable.value));
-        // putItem(`${save_prefix}-imageHTML`, JSON.stringify(imageHTML.value));
-        // putItem(`${save_prefix}-backgroundColors`, JSON.stringify(backgroundColors.value));
-        putItem(`${save_prefix}-guesses`, JSON.stringify(guesses.value));
-        putItem(`${save_prefix}-searchDisable`, JSON.stringify(searchDisable.value));
-        putItem(`${save_prefix}-imageHTML`, JSON.stringify(imageHTML.value));
-        putItem(`${save_prefix}-backgroundColors`, JSON.stringify(backgroundColors.value));
-        putItem(`${save_prefix}-all_skins`, JSON.stringify(all_skins.value));
-      }
-    // });
+    console.log(
+      "imageHTML",
+      imageHTML.value[row][col],
+      "outer ",
+      img.outerHTML
+    );
+
+    // save everything at the end
+    const save_prefix = currentBoardFileName.value;
+    putItem(`${save_prefix}-guesses`, JSON.stringify(guesses.value));
+    putItem(
+      `${save_prefix}-searchDisable`,
+      JSON.stringify(searchDisable.value)
+    );
+    putItem(`${save_prefix}-imageHTML`, JSON.stringify(imageHTML.value));
+    putItem(
+      `${save_prefix}-backgroundColors`,
+      JSON.stringify(backgroundColors.value)
+    );
+    putItem(`${save_prefix}-all_skins`, JSON.stringify(all_skins.value));
+  }
+  // });
 });
 
 // add in events for correct guess, as well as incorrect guess...
 
 const board_data = ref(null);
 const all_skins = ref(null);
-// FIXME: Things that I will need to keep track of when saving a game:
+// NOTE: Things that I will need to keep track of when saving a game:
 /*
   all the possible skins: these can change as the data on the backend updates. Want to make sure that new skins are not selectable when it's not a possible answer
   Guesses remaining: easy
@@ -518,60 +460,57 @@ const all_skins = ref(null);
   - remember to disable the input to that square
 */
 
-// FIXME: On frontend AND backend: 
-// make it so that each board has a unique "all_skins" file
+//  Get the unique "all_skins" file associated with the current board
 function fetchAllSkins(day, month, year) {
   // if (exists(`${currentBoardString.value}-all_skins`)) {
   //   return get(`${currentBoardString.value}-all_skins`);
   // }
 
   // check if already exists in indexDB
-  exists(`board-${day}-${month}-${year}.json-all_skins`).then(
-    (value) => value ? get2(`board-${day}-${month}-${year}.json-all_skins`).then((value) => all_skins.value = value) : fetch(SERVER_URL + `board/all_skins/past/${year}/${month}/${day}`).then((response) => {
-        response.json().then((value) => {
-          // console.log("fetchAllSkins", value[0].weapon_name, typeof(value[0]));
-          let output = [];
-          value.forEach(w => output.push(w.weapon_name))
-          console.log("FETCH ALL SKINS: ", output)
-          all_skins.value = output;
-          // putItem(`${currentBoardString.value}-all_skins`, JSON.stringify(output));
-          // exists()
-          return output;
-        });
-    })
-  )
+  exists(`board-${day}-${month}-${year}.json-all_skins`).then((value) =>
+    value
+      ? getFromIDB(`board-${day}-${month}-${year}.json-all_skins`).then(
+          (value) => (all_skins.value = value)
+        )
+      : fetch(SERVER_URL + `board/all_skins/past/${year}/${month}/${day}`).then(
+          (response) => {
+            response.json().then((value) => {
+              // console.log("fetchAllSkins", value[0].weapon_name, typeof(value[0]));
+              let output = [];
+              value.forEach((w) => output.push(w.weapon_name));
+              console.log("FETCH ALL SKINS: ", output);
+              all_skins.value = output;
+              // putItem(`${currentBoardString.value}-all_skins`, JSON.stringify(output));
+              // exists()
+              return output;
+            });
+          }
+        )
+  );
 
-  return
+  return;
 
-  fetch(SERVER_URL + `board/all_skins/past/${year}/${month}/${day}`).then((response) => {
-    response.json().then((value) => {
-      // console.log("fetchAllSkins", value[0].weapon_name, typeof(value[0]));
-      let output = [];
-      value.forEach(w => output.push(w.weapon_name))
-      console.log("FETCH ALL SKINS: ", output)
-      all_skins.value = output;
-      // putItem(`${currentBoardString.value}-all_skins`, JSON.stringify(output));
-      // exists()
-      return output;
-    });
-  });
+  fetch(SERVER_URL + `board/all_skins/past/${year}/${month}/${day}`).then(
+    (response) => {
+      response.json().then((value) => {
+        // console.log("fetchAllSkins", value[0].weapon_name, typeof(value[0]));
+        let output = [];
+        value.forEach((w) => output.push(w.weapon_name));
+        console.log("FETCH ALL SKINS: ", output);
+        all_skins.value = output;
+        // putItem(`${currentBoardString.value}-all_skins`, JSON.stringify(output));
+        // exists()
+        return output;
+      });
+    }
+  );
 }
 
 function fetchDailyBoard() {
   // fetch the DAILY board
-  console.log("FETCHING DAILY BOARD")
+  console.log("FETCHING DAILY BOARD");
   return fetch(SERVER_URL + "board");
 }
-
-// FIXME : Decide what to do with this
-// function parseBoardName(boardName) {
-//   const temp = boardName.split('.')[0].split('-')
-//   const day = temp[1];
-//   const month = temp[2];
-//   const year = temp[3];
-
-//   return [day, month, year];
-// }
 
 function createResetBoardEvent() {
   // event to be emitted when the board is reset
@@ -585,7 +524,7 @@ function createReturnToDailyEvent() {
 
 document.addEventListener("resetBoard", (e) => {
   // handle resetting the board
-  
+
   // for each part of the game state, check if there already exists a value in localStorage
   const b = currentBoardString.value;
 
@@ -595,104 +534,127 @@ document.addEventListener("resetBoard", (e) => {
   // exists(`${b}-imageHTML`) ? imageHTML.value = get(`${b}-imageHTML`) : imageHTML.value = [[null,null,null],[null,null,null],[null,null,null]];
   const date = extractDate(b);
 
-  exists(`${b}-guesses`).then((value) => (value ? get2(`${b}-guesses`).then((value) => guesses.value = value) : guesses.value = MAX_GUESSES));
-  exists(`${b}-all_skins`).then((value) => (value ? get2(`${b}-all_skins`).then((value) => all_skins.value = JSON.parse(value)) :  fetchAllSkins(date[0], date[1], date[2])));
-  exists(`${b}-backgroundColors`).then((value) => (value ? get2(`${b}-backgroundColors`).then((value) => backgroundColors.value = JSON.parse(value)) : backgroundColors.value = STRING_DEFAULT));
-  exists(`${b}-searchDisable`).then((value) => (value ? get2(`${b}-searchDisable`).then((value) => searchDisable.value = JSON.parse(value)) : searchDisable.value = BOOL_DEFAULT));
-  exists(`${b}-imageHTML`).then((value) => (value ? 
-    get2(`${b}-imageHTML`).then((value) => {imageHTML.value = JSON.parse(value); // Remove the images from each square
-      // FIXME: This is a bandaid solution. It seems to work, but I don't like it
-  for (let r = 0; r < 3; r++) {
-    for (let c = 0; c < 3; c++) {
-      const element = document.getElementById(rowColtoString(r, c) + '-img');
-      if (element !== null) {
-        Array.from(element.children).forEach((c) => c.remove());
-        // TODO: to save the images in the squares, we should be able to just save the HTML to an array,
-        // and then repopulate the board once it's reloaded
-      }
-    }    
-  }}) 
-    : imageHTML.value = NULL_DEFAULT));
+  exists(`${b}-guesses`).then((value) =>
+    value
+      ? getFromIDB(`${b}-guesses`).then((value) => (guesses.value = value))
+      : (guesses.value = MAX_GUESSES)
+  );
+  exists(`${b}-all_skins`).then((value) =>
+    value
+      ? getFromIDB(`${b}-all_skins`).then(
+          (value) => (all_skins.value = JSON.parse(value))
+        )
+      : fetchAllSkins(date[0], date[1], date[2])
+  );
+  exists(`${b}-backgroundColors`).then((value) =>
+    value
+      ? getFromIDB(`${b}-backgroundColors`).then(
+          (value) => (backgroundColors.value = JSON.parse(value))
+        )
+      : (backgroundColors.value = STRING_DEFAULT)
+  );
+  exists(`${b}-searchDisable`).then((value) =>
+    value
+      ? getFromIDB(`${b}-searchDisable`).then(
+          (value) => (searchDisable.value = JSON.parse(value))
+        )
+      : (searchDisable.value = BOOL_DEFAULT)
+  );
+  exists(`${b}-imageHTML`).then((value) =>
+    value
+      ? getFromIDB(`${b}-imageHTML`).then((value) => {
+          imageHTML.value = JSON.parse(value); // Remove the images from each square
+          // FIXME: This is a bandaid solution. It seems to work, but I don't like it
+          for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+              const element = document.getElementById(
+                rowColtoString(r, c) + "-img"
+              );
+              if (element !== null) {
+                Array.from(element.children).forEach((c) => c.remove());
+              }
+            }
+          }
+        })
+      : (imageHTML.value = NULL_DEFAULT)
+  );
 
   currentBoardFileName.value = currentBoardString.value;
-
-  // // Remove the images from each square
-  // for (let r = 0; r < 3; r++) {
-  //   for (let c = 0; c < 3; c++) {
-  //     const element = document.getElementById(rowColtoString(r, c) + '-img');
-  //     if (element !== null) {
-  //       Array.from(element.children).forEach((c) => c.remove());
-  //       // TODO: to save the images in the squares, we should be able to just save the HTML to an array,
-  //       // and then repopulate the board once it's reloaded
-  //     }
-  //   }    
-  // }
-})
+});
 
 function fetchPastBoard(boardName) {
   // fetch information for a past board
-  let output;
   // first, we need to clean the input
-  console.log("TESTING FETCH PAST: ", boardName)
-  const temp = boardName.split('.')[0].split('-')
+  console.log("TESTING FETCH PAST: ", boardName);
+  const temp = boardName.split(".")[0].split("-");
   const day = temp[1];
   const month = temp[2];
   const year = temp[3];
-  fetch(SERVER_URL + `board/past/${year}/${month}/${day}`)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("Network response error when getting game board");
-      }
-      response.json().then((value) => {
-        console.log("TESTING NEW PAST BOARD FUNCTION: ", value);
-        // board_data.value = value;
-        board_data.value["board"] = value[0];
-        board_data.value["row_queries"] = value[1];
-        board_data.value["col_queries"] = value[2];
-        console.log("board: ",
-          // board_data.value[1][0],
-          value[0], value[1], value[2],
-          board_data.value["board"],
-          board_data.value["row_queries"],
-          board_data.value["col_queries"]
-        )
+  fetch(SERVER_URL + `board/past/${year}/${month}/${day}`).then((response) => {
+    if (!response.ok) {
+      throw new Error("Network response error when getting game board");
+    }
+    response.json().then((value) => {
+      console.log("TESTING NEW PAST BOARD FUNCTION: ", value);
+      // board_data.value = value;
+      board_data.value["board"] = value[0];
+      board_data.value["row_queries"] = value[1];
+      board_data.value["col_queries"] = value[2];
+      console.log(
+        "board: ",
+        // board_data.value[1][0],
+        value[0],
+        value[1],
+        value[2],
+        board_data.value["board"],
+        board_data.value["row_queries"],
+        board_data.value["col_queries"]
+      );
 
-        // FIXME : Finish implementing this.
-        // i.e. save the current board TODO and make sure that you reset the images and the disabled, and the guesses
+      // FIXME : Finish implementing this.
+      // i.e. save the current board TODO and make sure that you reset the images and the disabled, and the guesses
 
-        const date = extractDate(currentBoardString.value);
+      const date = extractDate(currentBoardString.value);
 
-        fetchAllSkins(date[0], date[1], date[2])
+      fetchAllSkins(date[0], date[1], date[2]);
 
-        document.dispatchEvent(createResetBoardEvent());
-      })
-    })
+      document.dispatchEvent(createResetBoardEvent());
+    });
+  });
 }
 
 function fetchDailyBoardName() {
   return fetch(SERVER_URL + "board/today")
     .catch((error) => console.log(error))
-    .then((response) => {console.log(SERVER_URL + "board/today"); console.log(response); console.log(response.value); return response.json();})
+    .then((response) => {
+      console.log(SERVER_URL + "board/today");
+      console.log(response);
+      console.log(response.value);
+      return response.json();
+    })
     .then((value) => {
       console.log("Returning this value, ", value);
       return value;
     })
-    .catch((error) => console.log("Something went wrong here", error));
+    .catch((error) =>
+      console.log(
+        "Something went wrong when fetching daily board name: ",
+        error
+      )
+    );
 }
 
 /**
  * Extract the date from a board name
- * 
+ *
  * @param s - input string
  */
 function extractDate(s) {
-  let o = s.split('.')[0].split('-');
-  return [o[1], o[2], o[3]]
+  let o = s.split(".")[0].split("-");
+  return [o[1], o[2], o[3]];
 }
 
 onMounted(() => {
-  let response;
-  // fetchAllSkins();
   fetchDailyBoard()
     .then((response) => {
       if (!response.ok) {
@@ -714,15 +676,6 @@ onMounted(() => {
       // console.log("printing data...");
       // console.log(data.json());
     });
-  // for testing:
-  if (localStorage.getItem("test")) {
-    let t = JSON.parse(localStorage.getItem("test"));
-    console.log("The current stored value is: ", t, "increment by one:");
-    localStorage.setItem("test", t + 1);
-  } else {
-    localStorage.setItem("test", JSON.stringify(0));
-  }
-  // end testing
 
   // Saving the name of the "daily" board, i.e. the front page
   // Retrieving any info about the daily board
@@ -731,40 +684,54 @@ onMounted(() => {
     currentBoardFileName.value = boardName;
     dailyBoardName.value = boardName;
 
-    const date = extractDate(boardName)
+    const date = extractDate(boardName);
 
-    fetchAllSkins(date[0], date[1], date[2])
+    fetchAllSkins(date[0], date[1], date[2]);
 
     putItem("dailyBoardName", boardName);
 
-    exists(`${boardName}-guesses`).then((value) => console.log("TESTING IF EXISTS, ", value))
+    exists(`${boardName}-guesses`).then((value) =>
+      console.log("TESTING IF EXISTS, ", value)
+    );
 
-    // get2(`${boardName}-guesses`).then((value) => console.log("TESTING GET: ", value))
+    exists(`${boardName}-guesses`).then((value) =>
+      value
+        ? getFromIDB(`${boardName}-guesses`).then(
+            (value) => (guesses.value = value)
+          )
+        : null
+    );
 
-    // TODO : Make the below like the above
-    // if (exists(`${boardName}-guesses`)) {
-    //   guesses.value = get(`${boardName}-guesses`);
-    // }
-    exists(`${boardName}-guesses`).then((value) => (value ? get2(`${boardName}-guesses`).then((value) => guesses.value = value) : null));
+    exists(`${boardName}-searchDisable`).then((value) =>
+      value
+        ? getFromIDB(`${boardName}-searchDisable`).then(
+            (value) => (searchDisable.value = JSON.parse(value))
+          )
+        : null
+    );
+    exists(`${boardName}-imageHTML`).then((value) =>
+      value
+        ? getFromIDB(`${boardName}-imageHTML`).then(
+            (value) => (imageHTML.value = JSON.parse(value))
+          )
+        : null
+    );
 
-    // if (exists(`${boardName}-searchDisable`)) {
-      // searchDisable.value = get(`${boardName}-searchDisable`);
-      // console.log(JSON.parse(JSON.parse(localStorage.getItem(`${boardName}-searchDisable`))))
-    // }
-    // if (exists(`${boardName}-imageHTML`)) {
-    //   imageHTML.value = get(`${boardName}-imageHTML`);
-    
-    // }
-    exists(`${boardName}-searchDisable`).then((value) => (value ? get2(`${boardName}-searchDisable`).then((value) => searchDisable.value = JSON.parse(value)) : null));
-    exists(`${boardName}-imageHTML`).then((value) => (value ? get2(`${boardName}-imageHTML`).then((value) => imageHTML.value = JSON.parse(value)) : null));
-    
-    // if (exists(`${boardName}-backgroundColors`)) {
-    //   backgroundColors.value = get(`${boardName}-backgroundColors`);
-    // }
-    exists(`${boardName}-backgroundColors`).then((value) => (value ? get2(`${boardName}-backgroundColors`).then((value) => backgroundColors.value = JSON.parse(value)) : null));
-    exists(`${boardName}-all_skins`).then((value) => (value ? get2(`${boardName}-all_skins`).then((value) => all_skins.value = JSON.parse(value)) : null));
-  }); 
-
+    exists(`${boardName}-backgroundColors`).then((value) =>
+      value
+        ? getFromIDB(`${boardName}-backgroundColors`).then(
+            (value) => (backgroundColors.value = JSON.parse(value))
+          )
+        : null
+    );
+    exists(`${boardName}-all_skins`).then((value) =>
+      value
+        ? getFromIDB(`${boardName}-all_skins`).then(
+            (value) => (all_skins.value = JSON.parse(value))
+          )
+        : null
+    );
+  });
 });
 
 document.addEventListener("returnToDaily", (e) => {
@@ -796,7 +763,7 @@ document.addEventListener("returnToDaily", (e) => {
 });
 
 function returnToDaily() {
-  console.log("returning!")
+  console.log("returning!");
   document.dispatchEvent(createReturnToDailyEvent());
 }
 
@@ -804,8 +771,8 @@ const HARD_CUTOFF = 30;
 const MED_CUTOFF = 100;
 
 function getBoardDifficulty() {
-  const b = board_data.value["board"]
-  console.log("Get board diff: ", b)
+  const b = board_data.value["board"];
+  console.log("Get board diff: ", b);
   const NUM_CELLS = 9;
   let total = 0;
   for (let r = 0; r < b.length; r++) {
@@ -815,34 +782,42 @@ function getBoardDifficulty() {
   }
   const average = total / NUM_CELLS;
 
-  console.log("AVERAGE", average)
+  console.log("AVERAGE", average);
   if (average < HARD_CUTOFF) {
-    return 'Hard'
-  }
-  else if (average < MED_CUTOFF) {
-    return 'Medium'
-  }
-  else if (!isNaN(average)) {
-    return 'Easy'
+    return "Hard";
+  } else if (average < MED_CUTOFF) {
+    return "Medium";
+  } else if (!isNaN(average)) {
+    return "Easy";
   }
 
   return null;
 }
-
 </script>
 
-<!-- TODO: Add all necessary styling -->
 <template>
-  <div class="container" style="color: white;">
-    <div class="top-bar" >
-      <h1>CS//<span style="color: cornflowerblue">Grid</span>//<span style="color: orange">Game</span></h1>
-      <div style="display: flex; justify-content: center; gap: 10px;">
+  <div class="container" style="color: white">
+    <div class="top-bar">
+      <h1>
+        CS//<span style="color: cornflowerblue">Grid</span>//<span
+          style="color: orange"
+          >Game</span
+        >
+      </h1>
+      <div style="display: flex; justify-content: center; gap: 10px">
         <PastBoards />
-        <button v-if="currentBoardString != dailyBoardName" @click="returnToDaily()">Return to Board of the Day</button>
+        <button
+          v-if="currentBoardString != dailyBoardName"
+          @click="returnToDaily()"
+        >
+          Return to Board of the Day
+        </button>
       </div>
     </div>
     <div v-if="currentBoardString != dailyBoardName">
-      <div style="padding-top: 50px;">Playing board from {{ currentParsedBoardString }}</div>
+      <div style="padding-top: 50px">
+        Playing board from {{ currentParsedBoardString }}
+      </div>
     </div>
     <!-- <video autoplay muted loop style="object-fit: fill; height: 100%; width: 100%; filter: invert() blur(20px); position: absolute; left: 0%; top: 0%; z-index: -100;">
       <source src="../assets/output.mp4" type="video/mp4">
@@ -858,44 +833,89 @@ function getBoardDifficulty() {
     </video> -->
     <div v-if="board_data" class="gridgame-board">
       <div id="difficulty">
-        <div v-if="getBoardDifficulty() == 'Easy'">This board's difficulty is <span style="color: black !important; background-color: green; border-radius: 5px; padding: 2px;">EASY</span></div>
-        <div v-else-if="getBoardDifficulty() == 'Medium'">This board's difficulty is <span style="color: black !important; background-color: yellow; border-radius: 5px; padding: 2px;">MEDIUM</span></div>
-        <div v-else-if="getBoardDifficulty() == 'Hard'">This board's difficulty is <span style="color: black !important; background-color: red; border-radius: 5px; padding: 2px;">HARD</span></div>
+        <div v-if="getBoardDifficulty() == 'Easy'">
+          This board's difficulty is
+          <span
+            style="
+              color: black !important;
+              background-color: green;
+              border-radius: 5px;
+              padding: 2px;
+            "
+            >EASY</span
+          >
+        </div>
+        <div v-else-if="getBoardDifficulty() == 'Medium'">
+          This board's difficulty is
+          <span
+            style="
+              color: black !important;
+              background-color: yellow;
+              border-radius: 5px;
+              padding: 2px;
+            "
+            >MEDIUM</span
+          >
+        </div>
+        <div v-else-if="getBoardDifficulty() == 'Hard'">
+          This board's difficulty is
+          <span
+            style="
+              color: black !important;
+              background-color: red;
+              border-radius: 5px;
+              padding: 2px;
+            "
+            >HARD</span
+          >
+        </div>
       </div>
       <!-- We want a 4x4 table 
       Simplest approach: have one div contain 4 smaller flexboxes, which contain all info for a row
       So the outer is a vertically stacked flexbox, and then 4 inner horizontal flexboxes-->
       <div class="board-row" style="color: orange">
-        <div class="question" style="opacity: 0;">...</div>
+        <div class="question" style="opacity: 0">...</div>
         <div class="question">{{ board_data["col_queries"][0] }}</div>
         <div class="question">{{ board_data["col_queries"][1] }}</div>
         <div class="question">{{ board_data["col_queries"][2] }}</div>
       </div>
-      <div class="board-row" style="color: cornflowerblue;">
+      <div class="board-row" style="color: cornflowerblue">
         <div class="question">{{ board_data["row_queries"][0] }}</div>
-        <SkinSquare v-for="c in 3" :row="0" :col="c-1" :items="all_skins" 
-            :disabled="searchDisable[0][c-1]" 
-            :backgroundColor="backgroundColors[0][c-1]"
-            :shakeText="shakeAnimation[0][c-1]"
-            :imageHtml="imageHTML[0][c-1]"
+        <SkinSquare
+          v-for="c in 3"
+          :row="0"
+          :col="c - 1"
+          :items="all_skins"
+          :disabled="searchDisable[0][c - 1]"
+          :backgroundColor="backgroundColors[0][c - 1]"
+          :shakeText="shakeAnimation[0][c - 1]"
+          :imageHtml="imageHTML[0][c - 1]"
         />
       </div>
-      <div class="board-row" style="color: cornflowerblue;">
+      <div class="board-row" style="color: cornflowerblue">
         <div class="question">{{ board_data["row_queries"][1] }}</div>
-        <SkinSquare v-for="c in 3" :row="1" :col="c-1" :items="all_skins" 
-            :disabled="searchDisable[1][c-1]" 
-            :backgroundColor="backgroundColors[1][c-1]"
-            :shakeText="shakeAnimation[1][c-1]"
-            :imageHtml="imageHTML[1][c-1]"
+        <SkinSquare
+          v-for="c in 3"
+          :row="1"
+          :col="c - 1"
+          :items="all_skins"
+          :disabled="searchDisable[1][c - 1]"
+          :backgroundColor="backgroundColors[1][c - 1]"
+          :shakeText="shakeAnimation[1][c - 1]"
+          :imageHtml="imageHTML[1][c - 1]"
         />
       </div>
-      <div class="board-row" style="color: cornflowerblue;">
+      <div class="board-row" style="color: cornflowerblue">
         <div class="question">{{ board_data["row_queries"][2] }}</div>
-        <SkinSquare v-for="c in 3" :row="2" :col="c-1" :items="all_skins" 
-            :disabled="searchDisable[2][c-1]" 
-            :backgroundColor="backgroundColors[2][c-1]"
-            :shakeText="shakeAnimation[2][c-1]"
-            :imageHtml="imageHTML[2][c-1]"
+        <SkinSquare
+          v-for="c in 3"
+          :row="2"
+          :col="c - 1"
+          :items="all_skins"
+          :disabled="searchDisable[2][c - 1]"
+          :backgroundColor="backgroundColors[2][c - 1]"
+          :shakeText="shakeAnimation[2][c - 1]"
+          :imageHtml="imageHTML[2][c - 1]"
         />
       </div>
       <div class="bottom-bar">
@@ -906,13 +926,11 @@ function getBoardDifficulty() {
       <!-- Optionally show something else if board_data is undefined -->
       <p>Loading or No Data Available</p>
     </div>
-    
   </div>
 </template>
 
 <style scoped>
 .top-bar {
-
 }
 .bottom-bar {
   background: radial-gradient(circle, black 0, transparent 20%);
@@ -922,11 +940,7 @@ function getBoardDifficulty() {
   flex-direction: column;
   min-height: 70vh;
   gap: 4px;
-  /* margin-left: -5%; */
-  /* margin-top: 50px; */
-  /* width: 80%; */
   height: auto;
-  
 }
 .board-row {
   display: flex;
@@ -951,8 +965,6 @@ function getBoardDifficulty() {
     background: radial-gradient(circle, black 0, transparent 80%);
     border-radius: 261px;
     max-width: 1250px;
-    /* left: 50%;
-    transform: translateX(-50%); */
   }
 }
 
@@ -981,7 +993,6 @@ function getBoardDifficulty() {
 
 .square {
   width: 20%;
-  /* height: 20%; */
   aspect-ratio: 1/1;
   border-width: 2px;
   border-color: rgb(201, 201, 153);
@@ -996,5 +1007,4 @@ function getBoardDifficulty() {
 .square:hover {
   background-color: rgb(112, 112, 112);
 }
-
 </style>

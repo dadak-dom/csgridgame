@@ -1,14 +1,16 @@
-<script setup>
-</script>
+<script setup></script>
 
 <template>
- <div class="outer">
-  <h1>How do I play?</h1>
-  <div class="instructions">
-    <div class="step">test</div>
-    <div class="step">test</div>
+  <div class="outer">
+    <h1>How do I play?</h1>
+    <div class="instructions">
+      <div class="step">
+        For each cell in the grid above, name a skin for which the corresponding
+        row and column hold true
+      </div>
+      <div class="step">Once a skin has been used, it cannot be used again</div>
+    </div>
   </div>
- </div>
 </template>
 
 <style scoped>
@@ -26,7 +28,7 @@
 }
 .step {
   border: 1px red solid;
-  padding-top: 100px;
-  padding-bottom: 100px;
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 </style>
