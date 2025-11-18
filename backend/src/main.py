@@ -167,49 +167,14 @@ def listPastBoards():
         return datetime.date(int(year), int(month), int(day))
 
     return sorted(boards, key=get_date, reverse=True)
-    
-# FIXME: There are some duplicates in the crawl data. Remove those (SQL?)
-# Got a sql query to see what the dupes are, next just need to remove them
-# FIXME : Instead of just having one list of all possible skins, make a new list for EACH board. 
-# def setAllPossibleSkins():
-#     '''
-#      Create the 'all_possible_skins.json' file
-#      Should be done each time a new board is generated
-
-#      The purpose of the file is to limit the options that a player is allowed to select from.
-#      This way, someone can't guess a skin that has zero chance of appearing as an answer - keeps the game from being too frustrating
-#     '''
-#     skin_names = []
-#     with open(constants.CRAWL_DATA_DIR, 'r', encoding='utf8') as crawl_data:
-#         skin_data = json.load(crawl_data)        
-#         for skin in skin_data:
-#             # Make sure that, for the purposes of the GridGame, we're only allowing non-knives and skins with prices attached
-#             if skin['weapon-category'] != WeaponCategory.KNIFE and utils.has_numbers(str(skin['prices'])):
-#                 skin_names.append({"weapon_name" : f"{skin['weapon']} | {skin['name']}"})
-#     # Delete the old file, if it already exists:
-#     if os.path.exists(constants.SKIN_NAMES_DIR):
-#         logging.info(f"{constants.SKIN_NAMES_DIR} already exists, DELETING then REGENING...")
-#         os.remove(constants.SKIN_NAMES_DIR)
-#     with open(constants.SKIN_NAMES_DIR, 'w', encoding='utf-8') as f:
-#         json.dump(skin_names, f)
-    
-
-# @app.get("/all_skins/")
-# def getAllPossibleSkins():
-#     output = []
-#     with open(os.path.join(constants.SKIN_NAMES_DIR), 'r', encoding='utf8') as names:
-#         weapons = json.load(names)
-#         for w in weapons:
-#             output.append(w['weapon_name'])
-#     return output
-
 
 @app.get("/")
 def read_root():
-    return {"Hello": "World",
-            # 'all_possible' : getAllPossibleSkins(),
-            "test_single_item" : getBoardOfTheDay()[0][0][0][0],
-            "entire_board" : getBoardOfTheDay()} # <- how to get a single item
+    return ""
+    # return {"Hello": "World",
+    #         # 'all_possible' : getAllPossibleSkins(),
+    #         "test_single_item" : getBoardOfTheDay()[0][0][0][0],
+    #         "entire_board" : getBoardOfTheDay()} # <- how to get a single item
 
 # TODO: Make it so that if the date of the board that is in the daily slot is "out of date", generate a new board on startup
 @app.on_event("startup")
@@ -228,9 +193,12 @@ def get_board():
     logging.info("Getting board...")
     return {"board" : getBoardOfTheDay()[0], "row_queries" : getBoardOfTheDay()[1], "col_queries" : getBoardOfTheDay()[2]}
 
-# FIXME: This should be removed at some point as well...
-@app.get("/genboard/")
-def gen_board():
+# Generate a new board
+# NOTE: This is for testing purposes only. Requires a password.
+@app.get("/genboard/}")
+def gen_board(password: str = ""):
+    if password != os.getenv("SKINSAPI_TEST_PASS"):
+        return "You do not have permission to do that."
     logging.info("Generating new board...")
     generateBoard()
 
