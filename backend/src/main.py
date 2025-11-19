@@ -293,7 +293,7 @@ async def getSkinImage(skin_name):
 
 
 # TODO : Add the scheduler for making the board each day
-scheduler.add_job(gen_board, 'cron', hour=0, minute=5, id='generate_new_daily_board')
+scheduler.add_job(gen_board, 'cron', hour=0, minute=5, id='generate_new_daily_board') # FIXME: Specify time zone!
 
 # # FIXME: FOR TEMPORARY TESTING PURPOSES ONLY. DO NOT ALLOW THIS INTO PROD!!!
 # @app.get("/import-data/")
