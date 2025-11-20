@@ -2,6 +2,7 @@
 import { ref, onMounted } from "vue";
 import SkinSquare from "./SkinSquare.vue";
 import PastBoards from "./PastBoards.vue";
+import GameEndModal from "./GameEndModal.vue";
 defineProps({
   msg: String,
 });
@@ -99,7 +100,7 @@ function putItem(key, value) {
   let openRequest = indexedDB.open("SkinsDatabase", 1);
 
   openRequest.onupgradeneeded = function () {
-    console.log("UPGRADING DB!");
+    console.debug("UPGRADING DB!");
     let db = openRequest.result;
     if (!db.objectStoreNames.contains("boards")) {
       // if there's no "boards" store
@@ -120,7 +121,7 @@ function putItem(key, value) {
     const putRequest = store.put(boardData, key);
 
     putRequest.onsuccess = () => {
-      console.log("Saved: ", key, "successfully!");
+      console.debug("Saved: ", key, "successfully!");
     };
 
     putRequest.onerror = () => {
@@ -207,7 +208,7 @@ function getFromIDB(key) {
 
       getRequest.onsuccess = () => {
         const d = getRequest.result;
-        console.log("Running getFromIDB on key: ", key, " result: ", d);
+        console.debug("Running getFromIDB on key: ", key, " result: ", d);
         resolve(d.data);
       };
 
@@ -243,7 +244,7 @@ function createRightGuess(name, r, c, index, num_possible) {
 }
 
 document.addEventListener("pastBoardChosen", (e) => {
-  console.log("MESSAGE RECEIVED: ", e.detail.board);
+  console.debug("MESSAGE RECEIVED: ", e.detail.board);
   currentBoardString.value = e.detail.rawBoardName;
   currentParsedBoardString.value = e.detail.parsedBoardName;
   fetchPastBoard(currentBoardString.value);
@@ -254,10 +255,29 @@ document.addEventListener("invalidGuess", (e) => {
   // not to be confused with a WRONG guess
 });
 
+function createNoGuessesLeft() {
+  // set the background colors to a dark red
+  for (let r = 0; r < backgroundColors.value.length; r++) {
+    for (let c = 0; c < backgroundColors.value[r].length; c++) {
+      if (backgroundColors.value[r][c] == "") {
+        backgroundColors.value[r][c] = "#570102";
+      }
+    }
+  }
+  const save_prefix = currentBoardFileName.value;
+  putItem(
+    `${save_prefix}-backgroundColors`,
+    JSON.stringify(backgroundColors.value)
+  );
+  const e = new CustomEvent("noGuessesLeft");
+  return e;
+}
+
 document.addEventListener("userGuessed", (e) => {
-  console.log(e.detail.name);
+  console.debug(e.detail.name);
+
   guesses.value = guesses.value - 1;
-  console.log(
+  console.debug(
     "row",
     e.detail.row,
     "col",
@@ -267,38 +287,46 @@ document.addEventListener("userGuessed", (e) => {
   );
 
   const right_answers = board_data.value["board"][e.detail.row][e.detail.col];
-  console.log("Right answers: ", right_answers);
+  console.debug("Right answers: ", right_answers);
   const index = right_answers.indexOf(e.detail.name);
 
   if (guesses.value <= 0) {
+    // emit event, after 1 second, to show the GameEndModal, if the user
+    setTimeout(() => document.dispatchEvent(createNoGuessesLeft()), 1000);
     for (let r = 0; r < searchDisable.value.length; r++) {
       for (let c = 0; c < searchDisable.value[r].length; c++) {
         searchDisable.value[r][c] = true;
+        // if you have an empty square, add the red X
+        // console.log("imageHTML: ", imageHTML.value[r][c]);
+        // if (imageHTML.value[r][c] === null) {
+        //   imageHTML.value[r][c] =
+        //     '<img src="https://upload.wikimedia.org/wikipedia/commons/5/5f/Red_X.svg" style="width: 100%; margin-top: 10%;">';
+        // }
       }
     }
   }
 
   if (index === -1) {
     // emit("onWrongGuess");
-    console.log("wrong guess", e.detail.name);
+    console.debug("wrong guess", e.detail.name);
     document.dispatchEvent(
       createWrongGuess(e.detail.name, e.detail.row, e.detail.col)
     );
   } else {
-    console.log("right guess", e.detail.name);
+    console.debug("right guess", e.detail.name);
     // already_guessed.value.push(e.detail.name);
     // remove the skin from the possible guesses
     function notSkin(name) {
       return name != e.detail.name;
     }
     const index_to_remove = all_skins.value.indexOf(e.detail.name);
-    console.log("DEBUG:", e.detail.name, index_to_remove);
+    console.debug("DEBUG:", e.detail.name, index_to_remove);
     // all_skins.value = all_skins.value.splice(index_to_remove);
     // all_skins.value.splice(index_to_remove);
     all_skins.value = all_skins.value.filter(notSkin);
     // all_skins.value.splice(index_to_remove, index_to_remove)
     // all_skins.value = [];
-    // console.log()
+    // console.debug()
     document.dispatchEvent(
       createRightGuess(
         e.detail.name,
@@ -317,7 +345,7 @@ document.addEventListener(
   (e) => {
     const row = e.detail.row;
     const col = e.detail.col;
-    console.log("IN THE WRONG GUESS THINGY", guesses.value);
+    console.debug("IN THE WRONG GUESS THINGY", guesses.value);
 
     // if (guesses.value === 0) {
     //   for (let r = 0; r < searchDisable.value.length; r++) {
@@ -329,17 +357,17 @@ document.addEventListener(
 
     // Temporarily add the shake animation to the square prop
     shakeAnimation.value[row][col] = true;
-    // console.log("Shake animation before:", shakeAnimation.value, shakeAnimation.value[row][col]);
+    // console.debug("Shake animation before:", shakeAnimation.value, shakeAnimation.value[row][col]);
     setTimeout(() => {
       shakeAnimation.value[row][col] = false;
-      // console.log("TIMEOUT DONE");
-      // console.log("Shake animation after:", shakeAnimation.value);
+      // console.debug("TIMEOUT DONE");
+      // console.debug("Shake animation after:", shakeAnimation.value);
     }, 500);
 
     // Save the state of guess count and searchDisable
     const pre = currentBoardFileName.value;
     putItem(pre + "-guesses", JSON.stringify(guesses.value));
-    console.log("Search disable test", searchDisable.value);
+    console.debug("Search disable test", searchDisable.value);
     putItem(pre + "-searchDisable", JSON.stringify(searchDisable.value));
   }
 );
@@ -351,7 +379,7 @@ function rowColtoString(row, col) {
 document.addEventListener("onRightGuess", (e) => {
   const row = e.detail.row;
   const col = e.detail.col;
-  console.log(
+  console.debug(
     "IN THE RIGHT GUESS THINGY",
     e.detail.num_possible,
     e.detail.index
@@ -364,7 +392,7 @@ document.addEventListener("onRightGuess", (e) => {
 
   searchDisable.value[row][col] = true;
 
-  console.log("ELEMENT", element);
+  console.debug("ELEMENT", element);
 
   if (element) {
     const img = document.createElement("img");
@@ -412,16 +440,16 @@ document.addEventListener("onRightGuess", (e) => {
     }
 
     backgroundColors.value[row][col] = color;
-    console.log(
+    console.debug(
       "New background color info: ",
       backgroundColors.value[row][col]
     );
 
     element.appendChild(img);
-    console.log("IMAGE ELEMENT: ", img);
+    console.debug("IMAGE ELEMENT: ", img);
     imageHTML.value[row][col] = img.outerHTML;
 
-    console.log(
+    console.debug(
       "imageHTML",
       imageHTML.value[row][col],
       "outer ",
@@ -441,6 +469,21 @@ document.addEventListener("onRightGuess", (e) => {
       JSON.stringify(backgroundColors.value)
     );
     putItem(`${save_prefix}-all_skins`, JSON.stringify(all_skins.value));
+  }
+
+  // emit noGuessesLeft when all squares are filled
+  let allSquaresFilled = true;
+  for (let r = 0; r < imageHTML.value.length; r++) {
+    for (let c = 0; c < imageHTML.value[r].length; c++) {
+      console.debug("imageHTMLdebug:", imageHTML.value[r][c]);
+      if (imageHTML.value[r][c] === null) {
+        allSquaresFilled = false;
+      }
+    }
+  }
+  console.debug("all squares filled? : ", allSquaresFilled);
+  if (allSquaresFilled) {
+    setTimeout(() => document.dispatchEvent(createNoGuessesLeft()), 1000);
   }
   // });
 });
@@ -475,10 +518,10 @@ function fetchAllSkins(day, month, year) {
       : fetch(SERVER_URL + `board/all_skins/past/${year}/${month}/${day}`).then(
           (response) => {
             response.json().then((value) => {
-              // console.log("fetchAllSkins", value[0].weapon_name, typeof(value[0]));
+              // console.debug("fetchAllSkins", value[0].weapon_name, typeof(value[0]));
               let output = [];
               value.forEach((w) => output.push(w.weapon_name));
-              console.log("FETCH ALL SKINS: ", output);
+              console.debug("FETCH ALL SKINS: ", output);
               all_skins.value = output;
               // putItem(`${currentBoardString.value}-all_skins`, JSON.stringify(output));
               // exists()
@@ -493,10 +536,10 @@ function fetchAllSkins(day, month, year) {
   fetch(SERVER_URL + `board/all_skins/past/${year}/${month}/${day}`).then(
     (response) => {
       response.json().then((value) => {
-        // console.log("fetchAllSkins", value[0].weapon_name, typeof(value[0]));
+        // console.debug("fetchAllSkins", value[0].weapon_name, typeof(value[0]));
         let output = [];
         value.forEach((w) => output.push(w.weapon_name));
-        console.log("FETCH ALL SKINS: ", output);
+        console.debug("FETCH ALL SKINS: ", output);
         all_skins.value = output;
         // putItem(`${currentBoardString.value}-all_skins`, JSON.stringify(output));
         // exists()
@@ -508,7 +551,7 @@ function fetchAllSkins(day, month, year) {
 
 function fetchDailyBoard() {
   // fetch the DAILY board
-  console.log("FETCHING DAILY BOARD");
+  console.debug("FETCHING DAILY BOARD");
   return fetch(SERVER_URL + "board");
 }
 
@@ -585,7 +628,7 @@ document.addEventListener("resetBoard", (e) => {
 function fetchPastBoard(boardName) {
   // fetch information for a past board
   // first, we need to clean the input
-  console.log("TESTING FETCH PAST: ", boardName);
+  console.debug("TESTING FETCH PAST: ", boardName);
   const temp = boardName.split(".")[0].split("-");
   const day = temp[1];
   const month = temp[2];
@@ -595,12 +638,12 @@ function fetchPastBoard(boardName) {
       throw new Error("Network response error when getting game board");
     }
     response.json().then((value) => {
-      console.log("TESTING NEW PAST BOARD FUNCTION: ", value);
+      console.debug("TESTING NEW PAST BOARD FUNCTION: ", value);
       // board_data.value = value;
       board_data.value["board"] = value[0];
       board_data.value["row_queries"] = value[1];
       board_data.value["col_queries"] = value[2];
-      console.log(
+      console.debug(
         "board: ",
         // board_data.value[1][0],
         value[0],
@@ -625,19 +668,19 @@ function fetchPastBoard(boardName) {
 
 function fetchDailyBoardName() {
   return fetch(SERVER_URL + "board/today")
-    .catch((error) => console.log(error))
+    .catch((error) => console.debug(error))
     .then((response) => {
-      console.log(SERVER_URL + "board/today");
-      console.log(response);
-      console.log(response.value);
+      console.debug(SERVER_URL + "board/today");
+      console.debug(response);
+      console.debug(response.value);
       return response.json();
     })
     .then((value) => {
-      console.log("Returning this value, ", value);
+      console.debug("Returning this value, ", value);
       return value;
     })
     .catch((error) =>
-      console.log(
+      console.debug(
         "Something went wrong when fetching daily board name: ",
         error
       )
@@ -661,9 +704,9 @@ onMounted(() => {
         throw new Error("Network response error when getting game board");
       }
       response.json().then((value) => {
-        console.log(value);
+        console.debug(value);
         board_data.value = value;
-        console.log(
+        console.debug(
           "board",
           board_data["board"],
           "row qs",
@@ -673,8 +716,8 @@ onMounted(() => {
       });
     })
     .then((data) => {
-      // console.log("printing data...");
-      // console.log(data.json());
+      // console.debug("printing data...");
+      // console.debug(data.json());
     });
 
   // Saving the name of the "daily" board, i.e. the front page
@@ -691,7 +734,7 @@ onMounted(() => {
     putItem("dailyBoardName", boardName);
 
     exists(`${boardName}-guesses`).then((value) =>
-      console.log("TESTING IF EXISTS, ", value)
+      console.debug("TESTING IF EXISTS, ", value)
     );
 
     exists(`${boardName}-guesses`).then((value) =>
@@ -735,7 +778,7 @@ onMounted(() => {
 });
 
 document.addEventListener("returnToDaily", (e) => {
-  console.log("Daily board name: ", dailyBoardName.value);
+  console.debug("Daily board name: ", dailyBoardName.value);
   currentBoardString.value = dailyBoardName.value;
   currentBoardFileName.value = dailyBoardName.value;
   document.dispatchEvent(createResetBoardEvent());
@@ -745,9 +788,9 @@ document.addEventListener("returnToDaily", (e) => {
         throw new Error("Network response error when getting game board");
       }
       response.json().then((value) => {
-        console.log(value);
+        console.debug(value);
         board_data.value = value;
-        console.log(
+        console.debug(
           "board",
           board_data["board"],
           "row qs",
@@ -757,13 +800,13 @@ document.addEventListener("returnToDaily", (e) => {
       });
     })
     .then((data) => {
-      // console.log("printing data...");
-      // console.log(data.json());
+      // console.debug("printing data...");
+      // console.debug(data.json());
     });
 });
 
 function returnToDaily() {
-  console.log("returning!");
+  console.debug("returning!");
   document.dispatchEvent(createReturnToDailyEvent());
 }
 
@@ -772,7 +815,7 @@ const MED_CUTOFF = 100;
 
 function getBoardDifficulty() {
   const b = board_data.value["board"];
-  console.log("Get board diff: ", b);
+  console.debug("Get board diff: ", b);
   const NUM_CELLS = 9;
   let total = 0;
   for (let r = 0; r < b.length; r++) {
@@ -782,7 +825,7 @@ function getBoardDifficulty() {
   }
   const average = total / NUM_CELLS;
 
-  console.log("AVERAGE", average);
+  console.debug("AVERAGE", average);
   if (average < HARD_CUTOFF) {
     return "Hard";
   } else if (average < MED_CUTOFF) {
@@ -797,6 +840,10 @@ function getBoardDifficulty() {
 
 <template>
   <div class="container" style="color: white">
+    <div style="justify-content: right; display: flex">
+      <a href="#tutorial-start" id="help-button">❓</a>
+    </div>
+    <GameEndModal :backgroundColors="backgroundColors" />
     <div class="top-bar">
       <h1>
         CS//<span style="color: cornflowerblue">Grid</span>//<span
@@ -804,7 +851,10 @@ function getBoardDifficulty() {
           >Game</span
         >
       </h1>
-      <div style="display: flex; justify-content: center; gap: 10px">
+      <div
+        v-if="board_data"
+        style="display: flex; justify-content: center; gap: 10px"
+      >
         <PastBoards />
         <button
           v-if="currentBoardString != dailyBoardName"
@@ -874,7 +924,7 @@ function getBoardDifficulty() {
       Simplest approach: have one div contain 4 smaller flexboxes, which contain all info for a row
       So the outer is a vertically stacked flexbox, and then 4 inner horizontal flexboxes-->
       <div class="board-row" style="color: orange">
-        <div class="question" style="opacity: 0">...</div>
+        <div class="question" style="opacity: 0"></div>
         <div class="question">{{ board_data["col_queries"][0] }}</div>
         <div class="question">{{ board_data["col_queries"][1] }}</div>
         <div class="question">{{ board_data["col_queries"][2] }}</div>
@@ -923,8 +973,9 @@ function getBoardDifficulty() {
       </div>
     </div>
     <div v-else>
-      <!-- Optionally show something else if board_data is undefined -->
-      <p>Loading or No Data Available</p>
+      <p>
+        Something went wrong when fetching boards 😔 Please try again later.
+      </p>
     </div>
   </div>
 </template>
@@ -989,6 +1040,19 @@ function getBoardDifficulty() {
 
 #difficulty {
   padding: 10px 0;
+}
+
+#help-button {
+  transform: scale(1);
+  transition: transform 0.2s ease-in-out;
+  font-size: xx-large;
+  filter: hue-rotate(210deg);
+  position: fixed;
+  z-index: 1000;
+}
+
+#help-button:hover {
+  transform: scale(1.5);
 }
 
 .square {
