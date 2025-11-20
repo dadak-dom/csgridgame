@@ -39,7 +39,7 @@ scheduler.start()
 
 # Defining CORS headers
 origins = [
-    # "http://localhost:5173",
+    "http://localhost:5173",
     "http://localhost:3000",
     "http://192.168.0.235:3000",
     # "http://192.168.0.135"
@@ -195,7 +195,7 @@ def get_board():
 
 # Generate a new board
 # NOTE: This is for testing purposes only. Requires a password.
-@app.get("/genboard/}")
+@app.get("/genboard/")
 def gen_board(password: str = ""):
     if password != os.getenv("SKINSAPI_TEST_PASS"):
         return "You do not have permission to do that."
