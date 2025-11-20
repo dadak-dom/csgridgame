@@ -3,7 +3,16 @@ import GameBoard from "./components/GameBoard.vue";
 import SearchAutocomplete from "./components/SearchAutocomplete.vue";
 import BackgroundAnimation from "./components/BackgroundAnimation.vue";
 import Tutorial from "./components/Tutorial.vue";
+import Spacer from "./components/Spacer.vue";
+import Footer from "./components/Footer.vue";
 
+/*
+TODO: Finish the tutorial beautification process. Make sure that it works on mobile
+TODO: Make it more clear when the game is over. Idea: add X's over the spaces that were not filled in after you run out of guesses
+TODO: Once a game has finished, create a modal that pops up encouraging someone to copy-paste their score
+🟥 🟨 🟦 🟪 ⬜ - use these in the modal for the copy/paste! or these: https://www.piliapp.com/emoji/list/heart/ 
+TODO: Remove all the debug notes from the console so that people can't cheat that way
+*/
 // const SERVER_URL = process.env.GRIDGAME_SERVER_URL;
 </script>
 
@@ -11,11 +20,9 @@ import Tutorial from "./components/Tutorial.vue";
   <!-- <BackgroundAnimation /> -->
   <div id="app">
     <GameBoard />
-    <!-- <button @click="fetchBoard">Fetch board</button>
-    <button @click="genBoard">Generate new board</button>
-    <button @click="queryCheck">Check queries</button> -->
-    <!-- <p v-if="data">{{ data }}</p> -->
+    <Spacer />
     <Tutorial />
+    <Footer />
   </div>
 </template>
 
