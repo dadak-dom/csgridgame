@@ -193,7 +193,7 @@ def get_board():
 
 # Generate a new board
 # NOTE: This is for testing purposes only. Requires a password.
-@app.get("/genboard/}")
+@app.get("/genboard/")
 def gen_board(password: str = ""):
     if password != os.getenv("SKINSAPI_TEST_PASS"):
         return "You do not have permission to do that."
