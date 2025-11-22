@@ -39,6 +39,7 @@ scheduler.start()
 
 # Defining CORS headers
 origins = [
+    'http://localhost:5173',
     "http://csgridgame.com",
     "https://csgridgame.com",
 ]

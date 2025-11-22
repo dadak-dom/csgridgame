@@ -14,10 +14,7 @@ const SERVER_URL = import.meta.env.VITE_GRIDGAME_SERVER_URL;
 
 const MAX_GUESSES = 10;
 
-var test = ref(false);
-
-const GameState = ref(null);
-
+const score = ref(0);
 /*
 Format of GameState in localStorage:
 {
@@ -219,6 +216,24 @@ function getFromIDB(key) {
   });
 }
 
+function checkIfGameIsOver() {
+  let allSquaresFilled = true;
+  for (let r = 0; r < backgroundColors.value.length; r++) {
+    for (let c = 0; c < backgroundColors.value[r].length; c++) {
+      console.debug("checkIfGameIsOver:", backgroundColors.value[r][c]);
+      if (backgroundColors.value[r][c] === "") {
+        allSquaresFilled = false;
+      }
+    }
+  }
+
+  return allSquaresFilled
+}
+
+function openGameEndModal() {
+  document.dispatchEvent(createNoGuessesLeft());
+}
+
 function createWrongGuess(name, r, c) {
   const guessEvent = new CustomEvent("onWrongGuess", {
     detail: {
@@ -254,6 +269,11 @@ document.addEventListener("invalidGuess", (e) => {
   // implement what happens when a user inputs the wrong thing (not in list)
   // not to be confused with a WRONG guess
 });
+
+function createOpenGameEndModal() {
+  const e = new CustomEvent("openGameEndModal");
+  return e;
+}
 
 function createNoGuessesLeft() {
   // set the background colors to a dark red
@@ -439,6 +459,12 @@ document.addEventListener("onRightGuess", (e) => {
       color = "#636b6d";
     }
 
+    // add score
+    score.value = Number(score.value)
+    score.value += 201 - index
+    console.debug("score type: ", typeof(score.value));
+    console.debug("score.value: ", score.value);
+
     backgroundColors.value[row][col] = color;
     console.debug(
       "New background color info: ",
@@ -459,6 +485,7 @@ document.addEventListener("onRightGuess", (e) => {
     // save everything at the end
     const save_prefix = currentBoardFileName.value;
     putItem(`${save_prefix}-guesses`, JSON.stringify(guesses.value));
+    putItem(`${save_prefix}-score`, JSON.stringify(score.value));
     putItem(
       `${save_prefix}-searchDisable`,
       JSON.stringify(searchDisable.value)
@@ -472,17 +499,8 @@ document.addEventListener("onRightGuess", (e) => {
   }
 
   // emit noGuessesLeft when all squares are filled
-  let allSquaresFilled = true;
-  for (let r = 0; r < imageHTML.value.length; r++) {
-    for (let c = 0; c < imageHTML.value[r].length; c++) {
-      console.debug("imageHTMLdebug:", imageHTML.value[r][c]);
-      if (imageHTML.value[r][c] === null) {
-        allSquaresFilled = false;
-      }
-    }
-  }
-  console.debug("all squares filled? : ", allSquaresFilled);
-  if (allSquaresFilled) {
+  console.debug("all squares filled? : ", checkIfGameIsOver());
+  if (checkIfGameIsOver()) {
     setTimeout(() => document.dispatchEvent(createNoGuessesLeft()), 1000);
   }
   // });
@@ -582,6 +600,13 @@ document.addEventListener("resetBoard", (e) => {
       ? getFromIDB(`${b}-guesses`).then((value) => (guesses.value = value))
       : (guesses.value = MAX_GUESSES)
   );
+  exists(`${b}-score`).then((value) =>
+      value
+        ? getFromIDB(`${b}-score`).then(
+            (value) => (score.value = Number(value))
+          )
+        : score.value = 0
+    );
   exists(`${b}-all_skins`).then((value) =>
     value
       ? getFromIDB(`${b}-all_skins`).then(
@@ -737,6 +762,14 @@ onMounted(() => {
       console.debug("TESTING IF EXISTS, ", value)
     );
 
+    exists(`${boardName}-score`).then((value) =>
+      value
+        ? getFromIDB(`${boardName}-score`).then(
+            (value) => (score.value = value)
+          )
+        : null
+    );
+
     exists(`${boardName}-guesses`).then((value) =>
       value
         ? getFromIDB(`${boardName}-guesses`).then(
@@ -843,7 +876,7 @@ function getBoardDifficulty() {
     <div style="justify-content: right; display: flex">
       <a href="#tutorial-start" id="help-button">❓</a>
     </div>
-    <GameEndModal :backgroundColors="backgroundColors" />
+    <GameEndModal :backgroundColors="backgroundColors" :score="score"/>
     <div class="top-bar">
       <h1>
         CS//<span style="color: cornflowerblue">Grid</span>//<span
@@ -869,18 +902,6 @@ function getBoardDifficulty() {
         Playing board from {{ currentParsedBoardString }}
       </div>
     </div>
-    <!-- <video autoplay muted loop style="object-fit: fill; height: 100%; width: 100%; filter: invert() blur(20px); position: absolute; left: 0%; top: 0%; z-index: -100;">
-      <source src="../assets/output.mp4" type="video/mp4">
-    </video> -->
-    <!-- <video autoplay muted loop style="width: 100%; filter: invert() blur(5px); position: absolute; left: 50%; top: -10%; z-index: -100;">
-      <source src="../assets/output.mp4" type="video/mp4">
-    </video>
-    <video autoplay muted loop style="width: 100%; filter: invert() blur(5px); position: absolute; left: -50%; bottom: -10%; z-index: -100;">
-      <source src="../assets/output.mp4" type="video/mp4">
-    </video>
-    <video autoplay muted loop style="width: 100%; filter: invert() blur(5px); position: absolute; left: 50%; bottom: -10%; z-index: -100;">
-      <source src="../assets/output.mp4" type="video/mp4">
-    </video> -->
     <div v-if="board_data" class="gridgame-board">
       <div id="difficulty">
         <div v-if="getBoardDifficulty() == 'Easy'">
@@ -970,6 +991,9 @@ function getBoardDifficulty() {
       </div>
       <div class="bottom-bar">
         <h2>Guesses left: {{ guesses }}</h2>
+        <h2 v-if="!checkIfGameIsOver()">Score: {{ score }}</h2>
+        <h2 v-else><u @click="openGameEndModal()" style="cursor: pointer;">Score</u>: {{ score }}</h2>
+        <h3 style="font-size: small;">New puzzles daily!</h3>
       </div>
     </div>
     <div v-else>
@@ -985,6 +1009,8 @@ function getBoardDifficulty() {
 }
 .bottom-bar {
   background: radial-gradient(circle, black 0, transparent 20%);
+  /* display:; */
+  /* justify-content: space-evenly; */
 }
 .gridgame-board {
   display: flex;
