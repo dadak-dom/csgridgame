@@ -75,6 +75,7 @@ img {
 }
 .square {
   position: relative;
+  cursor: pointer;
 }
 .skin-image {
   position: absolute;

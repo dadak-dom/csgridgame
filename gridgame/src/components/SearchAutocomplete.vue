@@ -146,13 +146,14 @@ export default {
 
 /* Results styling */
 .user-search {
-  color: black;
+  color: white;
 }
 
 .text-input {
   opacity: 0;
   height: 100%;
   width: 100%;
+  cursor: pointer;
 }
 
 .autocomplete-results {
@@ -180,7 +181,7 @@ export default {
 }
 
 .blinking-cursor {
-  color: black;
+  color: white;
   opacity: 1.0;
   animation: blink 1s ease-in-out 0s infinite both;
 }
