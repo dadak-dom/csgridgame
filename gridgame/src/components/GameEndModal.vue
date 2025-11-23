@@ -15,7 +15,7 @@ function copyText(score) {
   // text.select();
   // text.setSelectionRange(0, 99999);
   let o = `Beat my score of ${score} on CSGridGame!\n\n`
-  navigator.clipboard.writeText(o + text.innerText + "\n🌐→cdgridgame.com");
+  navigator.clipboard.writeText(o + text.innerText + "\n🌐→csgridgame.com");
   console.debug("copy-paste-text: ", o + text.innerText)
   copiedText.value = true;
   setTimeout(() => copiedText.value = false, 2000)
