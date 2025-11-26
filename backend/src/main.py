@@ -187,14 +187,14 @@ async def startup_event():
 def shutdown_event():
     print("shutting down!!!!")
 
-@app.get("/board/")
+@app.get("/board")
 def get_board():
     logging.info("Getting board...")
     return {"board" : getBoardOfTheDay()[0], "row_queries" : getBoardOfTheDay()[1], "col_queries" : getBoardOfTheDay()[2]}
 
 # Generate a new board
 # NOTE: This is for testing purposes only. Requires a password.
-@app.get("/genboard/")
+@app.get("/genboard")
 def gen_board(password: str = ""):
     if password != os.getenv("SKINSAPI_TEST_PASS"):
         return "You do not have permission to do that."
