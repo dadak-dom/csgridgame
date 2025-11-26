@@ -34,14 +34,14 @@ app = FastAPI()
 scheduler = BackgroundScheduler()
 scheduler.start()
 
-# scheduler.add_job(test, 'interval', seconds=2, id='test_job')
-# TODO : fix some of the query formatting issues, like with flavor text
-
 # Defining CORS headers
 origins = [
     'http://localhost:5173',
     "http://csgridgame.com",
+    "http://www.csgridgame.com",
+    "https://www,csgridgame.com",
     "https://csgridgame.com",
+    "www.csgridgame.com"
 ]
 
 app.add_middleware(
@@ -292,7 +292,7 @@ async def getSkinImage(skin_name):
 
 
 # TODO : Add the scheduler for making the board each day
-scheduler.add_job(gen_board, 'cron', hour=0, minute=5, id='generate_new_daily_board') # FIXME: Specify time zone!
+scheduler.add_job(generateBoard, 'cron', hour=19, minute=0, id='generate_new_daily_board') # NOTE: This is assuming UTC time zone, since that's what the AWS containers run under
 
 # # FIXME: FOR TEMPORARY TESTING PURPOSES ONLY. DO NOT ALLOW THIS INTO PROD!!!
 # @app.get("/import-data/")
