@@ -39,9 +39,9 @@ origins = [
     'http://localhost:5173',
     "http://csgridgame.com",
     "http://www.csgridgame.com",
-    "https://www,csgridgame.com",
+    "https://www.csgridgame.com",
     "https://csgridgame.com",
-    "www.csgridgame.com"
+    # "www.csgridgame.com"
 ]
 
 app.add_middleware(

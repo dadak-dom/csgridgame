@@ -10,19 +10,19 @@
           corresponding row and column hold true
         </div>
         <div class="step">
-          <div style="display: flex">
+          <div>
             ★ For example: A skin that is
             <span
               style="
                 color: rgb(136, 71, 255);
-                margin-left: 5px;
-                margin-right: 5px;
+                /* margin-left: 5px;
+                margin-right: 5px; */
               "
             >
               Restricted
             </span>
             and starts with the letter F... the Glock-18 Fade!
-            <img style="width: 5%" src="../assets/images/9-Glock-18 Fade.png" />
+            <!-- <img style="width: 5%" src="../assets/images/9-Glock-18 Fade.png" /> -->
           </div>
         </div>
         <div class="step">
@@ -62,9 +62,9 @@
   color: white;
   position: relative;
   z-index: 100;
-  /* padding-top: 2%; */
-  max-width: 1250px;
-  /* border: 1px rgb(255, 77, 0) solid; */
+  width: 80%;
+  left: 50%;
+  transform: translateX(-50%);
 }
 .instructions {
   display: flex;

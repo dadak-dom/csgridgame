@@ -1018,6 +1018,10 @@ function getBoardDifficulty() {
   min-height: 70vh;
   gap: 4px;
   height: auto;
+  width: 90%;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
 }
 .board-row {
   display: flex;
@@ -1032,7 +1036,7 @@ function getBoardDifficulty() {
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: large;
+    font-size: medium;
     background: radial-gradient(circle, black 0, transparent 80%);
   }
 
@@ -1052,8 +1056,8 @@ function getBoardDifficulty() {
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: small;
-    background: radial-gradient(ellipse, black, transparent);
+    font-size: 12px;
+    /* background: radial-gradient(ellipse, black, transparent); */
   }
   .container {
     position: relative;
