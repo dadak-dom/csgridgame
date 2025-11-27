@@ -9,7 +9,7 @@
       class="text-input"
     />
     
-    <div v-if="isOpen" class="modal-overlay" @click.self="isOpen = false">
+    <div v-if="isOpen" class="modal-overlay-autocomplete" @click.self="isOpen = false">
       <div class="modal-content">
         <p class="user-search"> {{ search }}<span class="blinking-cursor">|</span></p>
         <ul class="autocomplete-results">
@@ -83,9 +83,15 @@ export default {
       }, 100);
     },
     filterResults() {
-      this.results = this.items.filter(
+      let temp = this.items.filter(
         (item) => item.toLowerCase().indexOf(this.search.toLowerCase()) > -1
       );
+      if(temp.length > 10) {
+        this.results = temp.slice(0, 10)
+      }
+      else {
+        this.results = temp
+      }
     },
     onChange() {
       this.filterResults();
@@ -120,12 +126,12 @@ export default {
 }
 
 /* Modal overlay */
-.modal-overlay {
-  position: fixed;
+.modal-overlay-autocomplete {
+  position: fixed !important;
   top: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100% !important;
+  height: 100% !important;
   background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
@@ -139,7 +145,7 @@ export default {
   padding: 20px;
   border-radius: 8px;
   max-height: 60vh;
-  overflow-y: auto;
+  overflow-y: scroll !important;
   width: 90%;
   max-width: 400px;
 }

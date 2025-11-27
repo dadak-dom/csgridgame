@@ -1020,8 +1020,7 @@ function getBoardDifficulty() {
   height: auto;
   width: 90%;
   position: relative;
-  left: 50%;
-  transform: translateX(-50%);
+  margin: 0 auto;
 }
 .board-row {
   display: flex;
